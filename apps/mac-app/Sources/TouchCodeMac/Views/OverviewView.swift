@@ -1,0 +1,102 @@
+import SwiftUI
+
+struct OverviewView: View {
+    @ObservedObject var workspace: WorkspaceStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Bridge your iPad to your coding agent")
+                    .font(.largeTitle.weight(.semibold))
+                Text("TouchCode transports visual context and user intent. Codex or another selected coding agent performs the code change.")
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 16) {
+                StatusCard(
+                    title: "Mac Bridge",
+                    value: bridgeStatusText,
+                    systemImage: "arrow.trianglehead.2.clockwise.rotate.90"
+                )
+                StatusCard(
+                    title: "iPad",
+                    value: workspace.ipadConnected ? "Connected" : "Waiting",
+                    systemImage: "ipad"
+                )
+                StatusCard(
+                    title: "Coding Agent",
+                    value: workspace.selectedCodingAgent.title,
+                    systemImage: "terminal"
+                )
+            }
+
+            GroupBox("Current project") {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "folder")
+                        Text(workspace.projectPath)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        Spacer()
+                        Button(workspace.demoSession == nil ? "Start MVP Demo" : "Demo Running") {
+                            Task { await workspace.startDemo() }
+                        }
+                        .disabled(workspace.demoSession != nil)
+                    }
+                    if let session = workspace.demoSession {
+                        LabeledContent("iPad bridge address", value: session.bridgeURL)
+                        LabeledContent("Preview", value: session.previewURL)
+                    }
+                    if let error = workspace.sessionError {
+                        Text(error)
+                            .foregroundStyle(.red)
+                    }
+                }
+                .padding(6)
+            }
+
+            Spacer()
+        }
+        .padding(28)
+        .toolbar {
+            ToolbarItem {
+                Button {
+                    Task { await workspace.refreshBridgeStatus() }
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                }
+            }
+        }
+    }
+
+    private var bridgeStatusText: String {
+        switch workspace.bridgeStatus {
+        case .checking: "Checking…"
+        case .connected(let version): "Connected · \(version)"
+        case .disconnected: "Not running"
+        }
+    }
+}
+
+private struct StatusCard: View {
+    let title: String
+    let value: String
+    let systemImage: String
+
+    var body: some View {
+        GroupBox {
+            HStack(spacing: 12) {
+                Image(systemName: systemImage)
+                    .font(.title2)
+                    .foregroundStyle(.tint)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title).font(.headline)
+                    Text(value).foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(8)
+            .frame(maxWidth: .infinity)
+        }
+    }
+}

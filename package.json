@@ -1,0 +1,18 @@
+{
+  "name": "touchcode",
+  "private": true,
+  "packageManager": "pnpm@10.28.2",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "build:mac": "swift build --package-path apps/mac-app --build-system native",
+    "check": "pnpm -r check",
+    "test": "pnpm -r test",
+    "dev:bridge": "pnpm --filter @touchcode/mac-bridge-runtime dev"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
