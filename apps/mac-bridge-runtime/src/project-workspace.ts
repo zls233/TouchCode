@@ -5,6 +5,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import net from "node:net";
 import { spawn, type ChildProcess } from "node:child_process";
+import http from "node:http";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
@@ -115,6 +116,18 @@ async function isListening(port: number) {
   });
 }
 
+async function isPreviewReady(port: number) {
+  return await new Promise<boolean>((resolve) => {
+    const request = http.get({ host: "127.0.0.1", port, path: "/", timeout: 500 }, (response) => {
+      response.resume();
+      response.once("end", () => resolve(true));
+      response.once("error", () => resolve(false));
+    });
+    request.once("timeout", () => { request.destroy(); resolve(false); });
+    request.once("error", () => resolve(false));
+  });
+}
+
 export async function startPreview(input: {
   workspace: PreparedWorkspace;
   command: string[];
@@ -156,7 +169,7 @@ export async function startPreview(input: {
         `Preview command exited (${child.signalCode ?? `status ${child.exitCode ?? "unknown"}`})${hint} — check that "${executable}" is installed and that "${input.workspace.commandCwd}" contains your project`,
       );
     }
-    if (await isListening(input.port)) {
+    if (await isPreviewReady(input.port)) {
       return { ...input.workspace, process: child, port: input.port };
     }
     await new Promise((resolve) => setTimeout(resolve, 100));
