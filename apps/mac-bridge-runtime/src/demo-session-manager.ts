@@ -258,6 +258,12 @@ export class DemoSessionManager {
 
   authorize(sessionId: string, token: string | undefined) {
     const record = this.get(sessionId);
+    // A session credential is valid only while its preview process is alive.
+    // The process exit handler marks status stopped, but checking both here
+    // also closes the small window before that handler runs.
+    if (record.status !== "running" || record.process.exitCode !== null) {
+      throw new Error("TouchCode session is no longer active");
+    }
     if (!token || !tokensMatch(record.clientToken, token)) {
       throw new Error("Session token is invalid");
     }

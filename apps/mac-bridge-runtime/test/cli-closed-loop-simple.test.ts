@@ -78,7 +78,14 @@ test("CLI closed loop (mock preview): worktree + pairing + V2 run", async () => 
   assert.equal(final!.json().status, "succeeded");
   assert.match(final!.json().previewRevision ?? "", /^\d+$/);
 
-  // No file assertion for minimal provider
+  // A token from a stopped preview must not remain usable.
+  fakePreview.emit("exit", 0, null);
+  const stopped = await app.inject({
+    method: "GET",
+    url: `/v1/sessions/${session.sessionId}`,
+    headers: { "x-touchcode-session-token": paired.clientToken },
+  });
+  assert.equal(stopped.statusCode, 401);
 
   await app.close();
   await execFileAsync("rm", ["-rf", worktree]).catch(() => undefined);
