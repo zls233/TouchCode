@@ -9,6 +9,13 @@ export DEVELOPER_DIR
 
 PROJECT="$ROOT_DIR/apps/ipad/TouchCode.xcodeproj"
 SCHEME="${TOUCHCODE_XCODE_SCHEME:-TouchCode}"
+
+if [[ ! -x "$DEVELOPER_DIR/usr/bin/xcodebuild" ]]; then
+  echo "Xcode toolchain not found at $DEVELOPER_DIR" >&2
+  echo "Set DEVELOPER_DIR to an installed Xcode Contents/Developer directory." >&2
+  exit 1
+fi
+
 if [[ -n "${TOUCHCODE_XCODE_DESTINATION:-}" ]]; then
   DESTINATION="$TOUCHCODE_XCODE_DESTINATION"
 else
@@ -28,12 +35,6 @@ else
     exit 1
   fi
   DESTINATION="platform=iOS Simulator,id=$DEVICE_ID"
-fi
-
-if [[ ! -x "$DEVELOPER_DIR/usr/bin/xcodebuild" ]]; then
-  echo "Xcode toolchain not found at $DEVELOPER_DIR" >&2
-  echo "Set DEVELOPER_DIR to an installed Xcode Contents/Developer directory." >&2
-  exit 1
 fi
 
 xcodebuild \
