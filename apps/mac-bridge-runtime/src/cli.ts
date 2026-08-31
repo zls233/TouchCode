@@ -85,8 +85,10 @@ async function main() {
     process.on("SIGTERM", shutdown);
     await new Promise<void>((resolve, reject) => {
       preview?.process.once("exit", (code, signal) => {
-        if (shuttingDown || signal === "SIGTERM") resolve();
-        else reject(new Error(`Preview exited (${signal ?? `status ${code ?? "unknown"}`})`));
+        if (!shuttingDown) {
+          console.error(`Preview stopped (${signal ?? `status ${code ?? "unknown"}`}); Bridge remains available for inspection.`);
+        }
+        resolve();
       });
     });
   } catch (error) {

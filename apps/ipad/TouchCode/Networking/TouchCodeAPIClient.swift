@@ -24,6 +24,16 @@ struct TouchCodeAPIClient {
         return try JSONDecoder().decode(DemoSession.self, from: data)
     }
 
+    func heartbeat(session: PairedWorkspaceSession) async throws -> PairedWorkspaceSession {
+        var request = URLRequest(url: bridgeURL.appending(path: "v1/sessions").appending(path: session.sessionId).appending(path: "heartbeat"))
+        request.httpMethod = "POST"
+        request.timeoutInterval = 10
+        request.setValue(session.clientToken, forHTTPHeaderField: "x-touchcode-session-token")
+        let (data, response) = try await urlSession.data(for: request)
+        try validate(response, data: data, expectedStatus: 200)
+        return try JSONDecoder().decode(PairedWorkspaceSession.self, from: data)
+    }
+
     func runVisual(
         session: PairedWorkspaceSession,
         capture: VisualCapture,
@@ -179,7 +189,7 @@ struct TouchCodeAPIClient {
 
     static func isPermanentBridgeError(_ error: Error) -> Bool {
         guard case .requestFailed(_, let statusCode) = error as? BridgeError else { return false }
-        return statusCode == 401 || statusCode == 403 || statusCode == 404
+        return statusCode == 401 || statusCode == 403 || statusCode == 404 || statusCode == 410
     }
 }
 

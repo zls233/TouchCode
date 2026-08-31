@@ -19,6 +19,11 @@ struct PairedWorkspaceSession: Codable {
     let latestRunId: String?
     let errorMessage: String?
     let clientToken: String
+    let status: String
+}
+
+enum BridgeConnectionState: Equatable {
+    case connected, unreachable, stopped, credentialsRejected
 }
 
 struct VisibleElementContext: Codable {

@@ -59,7 +59,12 @@ the repository, or an occupied preview port. It creates a detached worktree unde
    forced reload is issued by the client.
 
 Stopping with Ctrl-C terminates the preview and Bridge but preserves the isolated
-worktree. The CLI prints that worktree path so it can be inspected manually.
+worktree. If the preview exits unexpectedly, the CLI keeps the Bridge listening
+and marks the session `status: "stopped"` so the paired iPad can inspect the
+session and show a compact stopped banner; editing, run polling, SSE, Keep, and
+Undo return HTTP 410 with `error: "session_stopped"`. A valid token is still
+required for inspection and heartbeat, while missing or wrong tokens return
+HTTP 401. The CLI prints the worktree path so it can be inspected manually.
 
 ## Security and evidence boundary
 

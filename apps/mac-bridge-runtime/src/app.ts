@@ -10,7 +10,7 @@ import {
 import { CodexSdkProvider } from "./coding-agents/codex-sdk-provider.js";
 import { CodingAgentRegistry } from "./coding-agents/provider.js";
 import { DemoRunManager } from "./demo-run-manager.js";
-import { DemoSessionManager } from "./demo-session-manager.js";
+import { DemoSessionManager, SessionLifecycleError } from "./demo-session-manager.js";
 import { ProjectGrantStore } from "./project-grants.js";
 
 export type BridgeAppOptions = {
@@ -28,6 +28,19 @@ function isLoopback(address: string) {
 function sessionToken(headers: Record<string, unknown>) {
   const value = headers["x-touchcode-session-token"];
   return typeof value === "string" ? value : undefined;
+}
+
+function lifecycleFailure(error: unknown, activeOnly = false) {
+  const code = error instanceof SessionLifecycleError ? error.code : "session_token_invalid";
+  if (code === "session_stopped" && activeOnly) return { status: 410, body: { error: code } };
+  return { status: 401, body: { error: code === "session_not_found" ? "session_unauthorized" : code } };
+}
+
+function authorizeActive(sessions: DemoSessionManager, sessionId: string, token: string | undefined) {
+  const manager = sessions as DemoSessionManager & { authorizeActive?: DemoSessionManager["authorizeActive"] };
+  return manager.authorizeActive
+    ? manager.authorizeActive(sessionId, token)
+    : sessions.authorize(sessionId, token);
 }
 
 function decodeJPEG(encoded: string) {
@@ -92,10 +105,8 @@ export async function createBridgeApp(options: BridgeAppOptions = {}) {
         );
         return sessions.publicRecord(session);
       } catch (error) {
-        return reply.code(401).send({
-          error: "session_unauthorized",
-          message: error instanceof Error ? error.message : "Session authorization failed",
-        });
+          const failure = lifecycleFailure(error);
+          return reply.code(failure.status).send(failure.body);
       }
     });
 
@@ -105,10 +116,8 @@ export async function createBridgeApp(options: BridgeAppOptions = {}) {
         try {
           return sessions.heartbeat(request.params.sessionId, sessionToken(request.headers));
         } catch (error) {
-          return reply.code(401).send({
-            error: "session_unauthorized",
-            message: error instanceof Error ? error.message : "Session authorization failed",
-          });
+          const failure = lifecycleFailure(error);
+          return reply.code(failure.status).send(failure.body);
         }
       },
     );
@@ -122,7 +131,7 @@ export async function createBridgeApp(options: BridgeAppOptions = {}) {
           return reply.code(400).send({ error: "invalid_visual_edit", details: parsed.error.issues });
         }
         try {
-          const session = sessions.authorize(
+          const session = authorizeActive(sessions,
             request.params.sessionId,
             sessionToken(request.headers),
           );
@@ -156,6 +165,10 @@ export async function createBridgeApp(options: BridgeAppOptions = {}) {
           sessions.setLatestRun(session.sessionId, run.runId);
           return reply.code(202).send(run);
         } catch (error) {
+          if (error instanceof SessionLifecycleError) {
+            const failure = lifecycleFailure(error, true);
+            return reply.code(failure.status).send(failure.body);
+          }
           return reply.code(400).send({
             error: "visual_edit_failed",
             message: error instanceof Error ? error.message : "Unable to start visual edit",
@@ -168,9 +181,13 @@ export async function createBridgeApp(options: BridgeAppOptions = {}) {
       `${prefix}/:sessionId/runs/:runId`,
       async (request, reply) => {
         try {
-          sessions.authorize(request.params.sessionId, sessionToken(request.headers));
+          authorizeActive(sessions, request.params.sessionId, sessionToken(request.headers));
           return runs.forSession(request.params.sessionId, request.params.runId);
         } catch (error) {
+          if (error instanceof SessionLifecycleError) {
+            const failure = lifecycleFailure(error, true);
+            return reply.code(failure.status).send(failure.body);
+          }
           return reply.code(404).send({
             error: "unknown_coding_run",
             message: error instanceof Error ? error.message : "Unknown coding run",
@@ -183,7 +200,7 @@ export async function createBridgeApp(options: BridgeAppOptions = {}) {
       `${prefix}/:sessionId/runs/:runId/events`,
       async (request, reply) => {
         try {
-          sessions.authorize(request.params.sessionId, sessionToken(request.headers));
+          authorizeActive(sessions, request.params.sessionId, sessionToken(request.headers));
           reply.hijack();
           reply.raw.writeHead(200, {
             "cache-control": "no-cache",
@@ -214,6 +231,10 @@ export async function createBridgeApp(options: BridgeAppOptions = {}) {
           reply.raw.on("close", cleanup);
           reply.raw.on("error", cleanup);
         } catch (error) {
+          if (error instanceof SessionLifecycleError) {
+            const failure = lifecycleFailure(error, true);
+            return reply.code(failure.status).send(failure.body);
+          }
           return reply.code(404).send({
             error: "unknown_coding_run",
             message: error instanceof Error ? error.message : "Unknown coding run",
@@ -227,10 +248,14 @@ export async function createBridgeApp(options: BridgeAppOptions = {}) {
         `${prefix}/:sessionId/runs/:runId/${action}`,
         async (request, reply) => {
           try {
-            sessions.authorize(request.params.sessionId, sessionToken(request.headers));
+            authorizeActive(sessions, request.params.sessionId, sessionToken(request.headers));
             const snapshot = await runs.decide(request.params.sessionId, request.params.runId, action);
             return snapshot;
           } catch (error) {
+            if (error instanceof SessionLifecycleError) {
+              const failure = lifecycleFailure(error, true);
+              return reply.code(failure.status).send(failure.body);
+            }
             const message = error instanceof Error ? error.message : "Unknown coding run";
             const code = message.includes("already decided") ? 409 : 404;
             return reply.code(code).send({

@@ -192,6 +192,7 @@ export const pairedWorkspaceSessionSchema = z.object({
   latestRunId: z.string().min(1).nullable(),
   errorMessage: z.string().nullable(),
   clientToken: z.string().min(1),
+  status: z.enum(["running", "stopped"]).default("running"),
 });
 
 export const visualEditRequestSchema = z.object({
