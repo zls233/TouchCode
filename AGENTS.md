@@ -37,5 +37,19 @@ remaining risks. Luna implements and independently validates that plan.
 5. Evaluate: acceptance result, regression risk, unverified paths, and the
    next highest-priority slice. Continue the next cycle without repeating work.
 
+## Git workflow
+
+After every completed slice (fix, feature, or refactor), the agent must:
+
+1. `git add` the changed files.
+2. `git commit -m "<type>(<scope>): <short description>"` with conventional
+   commit style (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`).
+3. `git push` to `origin/main` (or the current branch).
+4. If the push fails due to remote changes, `git pull --rebase` first, then push
+   again.
+
+Do not ask the user to commit or push. Do it automatically after every verified
+slice. Never force-push, rebase interactive, or rewrite history.
+
 Never reset, overwrite, delete, push, publish, purchase, or call paid external
 providers without explicit user approval.
