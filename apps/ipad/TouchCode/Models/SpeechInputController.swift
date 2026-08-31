@@ -146,7 +146,13 @@ final class SpeechInputController: ObservableObject {
             }
             audioEngine.prepare()
             try audioEngine.start()
-            guard generation == operationGeneration else { return }
+            // A gesture can be cancelled while the async permission/model
+            // setup is in flight. Do not leave an engine tap or active session
+            // behind when that happens before `isRecording` becomes true.
+            guard generation == operationGeneration else {
+                await stopAndFinalize()
+                return
+            }
             isRecording = true
         } catch {
             resetWithoutFinalizing()
@@ -210,6 +216,7 @@ final class SpeechInputController: ObservableObject {
         analyzer = nil
         isRecording = false
         audioLevel = 0
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
     private func record(_ error: Error, generation: Int) {

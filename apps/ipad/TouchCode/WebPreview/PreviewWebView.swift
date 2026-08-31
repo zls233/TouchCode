@@ -22,7 +22,6 @@ struct PreviewWebView: UIViewRepresentable {
         webView.isInspectable = true
         webView.allowsBackForwardNavigationGestures = true
         controller.webView = webView
-        webView.load(URLRequest(url: url))
         let container = TouchInputContainer(webView: webView, drawing: drawing,
                                             enabled: drawingEnabled)
         container.onDrawingChanged = { drawing = $0 }
@@ -32,15 +31,12 @@ struct PreviewWebView: UIViewRepresentable {
             onViewportChange()
             controller.didReceiveViewportChange()
         }
+        container.navigate(to: url)
         return container
     }
 
     func updateUIView(_ container: TouchInputContainer, context: Context) {
-        let webView = container.webView
-        if !container.isLoadingURL, webView.url?.absoluteString != url.absoluteString {
-            container.isLoadingURL = true
-            webView.load(URLRequest(url: url))
-        }
+        container.navigate(to: url)
         container.enabled = drawingEnabled
         if container.drawing != drawing {
             container.syncingDrawing = true
@@ -57,6 +53,11 @@ struct PreviewWebView: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator(controller: controller) }
 
+    static func dismantleUIView(_ container: TouchInputContainer, coordinator: Coordinator) {
+        container.teardown()
+        coordinator.controller.webView = nil
+    }
+
     final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
         let controller: PreviewController
 
@@ -72,21 +73,25 @@ struct PreviewWebView: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             if let container = webView.superview as? TouchInputContainer {
-                container.isLoadingURL = false
+                container.navigationDidFinish()
             }
             controller.didReceiveViewportChange()
         }
 
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
             if let container = webView.superview as? TouchInputContainer {
-                container.isLoadingURL = false
+                container.navigationDidFail()
             }
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
             if let container = webView.superview as? TouchInputContainer {
-                container.isLoadingURL = false
+                container.navigationDidFail()
             }
+        }
+
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            (webView.superview as? TouchInputContainer)?.recoverFromWebContentTermination()
         }
     }
 }
@@ -113,6 +118,9 @@ final class TouchInputContainer: UIView {
     var enabled = true { didSet { canvas.isUserInteractionEnabled = enabled } }
     var syncingDrawing = false
     var isLoadingURL = false
+    private var requestedURL: URL?
+    private var didFinishNavigation = false
+    private var terminationRecoveryAttempted = false
     var drawing: PKDrawing {
         didSet {
             guard !syncingDrawing, canvas.drawing != drawing else { return }
@@ -165,6 +173,49 @@ final class TouchInputContainer: UIView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
+    func navigate(to url: URL) {
+        guard requestedURL != url else { return }
+        requestedURL = url
+        didFinishNavigation = false
+        isLoadingURL = true
+        webView.load(URLRequest(url: url))
+    }
+
+    func navigationDidFinish() {
+        isLoadingURL = false
+        didFinishNavigation = true
+        terminationRecoveryAttempted = false
+    }
+
+    func navigationDidFail() {
+        isLoadingURL = false
+    }
+
+    func recoverFromWebContentTermination() {
+        guard didFinishNavigation, !terminationRecoveryAttempted,
+              let url = requestedURL, webView.window != nil else { return }
+        terminationRecoveryAttempted = true
+        isLoadingURL = true
+        // Give WebKit a run-loop turn to tear down the old content process.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            guard let self, self.webView.window != nil, self.requestedURL == url else { return }
+            self.webView.load(URLRequest(url: url))
+        }
+    }
+
+    func teardown() {
+        webView.stopLoading()
+        webView.navigationDelegate = nil
+        webView.scrollView.delegate = originalScrollDelegate
+        canvas.delegate = nil
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "touchCodePreview")
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "touchCodeViewport")
+        onDrawingChanged = nil
+        onStrokeEnded = nil
+        onVoiceGesture = nil
+        onViewportChange = nil
+    }
+
     @objc private func handleVoiceGesture(_ gesture: TwoFingerVoiceGestureRecognizer) {
         guard let event = gesture.event else { return }
         let handler = onVoiceGesture
@@ -211,6 +262,24 @@ enum VoiceGestureEvent {
     case cancelled
 }
 
+/// The policy is kept separate from UIKit so threshold and decision behavior
+/// can be regression-tested without synthesizing touch events.
+enum TwoFingerGesturePolicy {
+    static let activationDelay: Duration = .milliseconds(450)
+    static let activationMoveLimit: CGFloat = 18
+    static let activationSpreadLimit: CGFloat = 0.12
+    static let actionTranslationLimit: CGFloat = 72
+
+    static func cancelsPendingActivation(moved: CGFloat, spread: CGFloat) -> Bool {
+        moved > activationMoveLimit || spread > activationSpreadLimit
+    }
+
+    static func decision(for translation: CGFloat) -> VoiceGestureDecision {
+        translation <= -actionTranslationLimit ? .cancel :
+            translation >= actionTranslationLimit ? .send : .neutral
+    }
+}
+
 final class TwoFingerVoiceGestureRecognizer: UIGestureRecognizer {
     private(set) var event: VoiceGestureEvent?
     private var initialCenter = CGPoint.zero
@@ -229,7 +298,7 @@ final class TwoFingerVoiceGestureRecognizer: UIGestureRecognizer {
         initialDistance = distance(points[0], points[1])
         activationTask?.cancel()
         activationTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .milliseconds(450))
+            try? await Task.sleep(for: TwoFingerGesturePolicy.activationDelay)
             guard let self, self.state == .possible else { return }
             self.activated = true
             self.event = .started(self.currentCenter)
@@ -244,7 +313,11 @@ final class TwoFingerVoiceGestureRecognizer: UIGestureRecognizer {
         currentCenter = midpoint(points[0], points[1])
         let moved = distance(initialCenter, currentCenter)
         let spread = initialDistance > 0 ? abs(distance(points[0], points[1]) - initialDistance) / initialDistance : 0
-        if !activated && (moved > 18 || spread > 0.12) { fail(); return }
+        if !activated && TwoFingerGesturePolicy.cancelsPendingActivation(moved: moved, spread: spread) { fail(); return }
+        // Keep the recognizer in `.possible` while the hold is pending. UIKit
+        // can deliver small touch-move batches during a stationary hold; moving
+        // to `.changed` here would make the activation task's possible-state
+        // guard fail before 450 ms elapse.
         guard activated else { return }
         let translation = currentCenter.x - initialCenter.x
         self.event = .changed(currentCenter, translation, decision(for: translation))
@@ -274,7 +347,7 @@ final class TwoFingerVoiceGestureRecognizer: UIGestureRecognizer {
 
     private func fail() { activationTask?.cancel(); state = .failed }
     private func decision(for translation: CGFloat) -> VoiceGestureDecision {
-        translation <= -72 ? .cancel : translation >= 72 ? .send : .neutral
+        TwoFingerGesturePolicy.decision(for: translation)
     }
     private func directPoints(in view: UIView?, event: UIEvent) -> [CGPoint] {
         event.allTouches?.filter { $0.type == .direct }.map { $0.location(in: view) } ?? []

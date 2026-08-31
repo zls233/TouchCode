@@ -475,14 +475,15 @@ struct WorkspaceView: View {
             voiceBubblePresented = true
             workspaceState = .recording
             Task { await speechInput.start() }
-        case .changed(let center, _, let decision):
+        case .changed(_, _, let decision):
             if decision != voiceDecision, decision != .neutral {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             }
-            voiceGestureCenter = center
+            // The voice affordance is anchored when the 450 ms hold activates.
+            // Keep consuming the live center for gesture decisions, but never
+            // move the presented UI with the fingers after activation.
             voiceDecision = decision
-        case .ended(let center, let decision):
-            voiceGestureCenter = center
+        case .ended(_, let decision):
             voiceDecision = decision
             if decision == .cancel { Task { await cancelVoice() } }
             else if decision == .send { Task { await sendVoice() } }

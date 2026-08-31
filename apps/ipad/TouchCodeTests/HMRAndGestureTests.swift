@@ -19,40 +19,31 @@ final class HMRAndGestureTests: XCTestCase {
 
     // MARK: - Voice gesture thresholds (matches PreviewWebView.TwoFingerVoiceGestureRecognizer)
     func testGestureThresholds() {
-        // Constants from PreviewWebView.swift: activation 450ms, move 18pt, spread 12%, send/cancel ±72pt
-        let activationThreshold: TimeInterval = 0.45
-        let moveCancelThreshold: Double = 18
-        let spreadCancelThreshold: Double = 0.12
-        let sendThreshold: Double = 72
-        XCTAssertEqual(activationThreshold, 0.45, accuracy: 0.001)
-        XCTAssertEqual(moveCancelThreshold, 18, accuracy: 0.01)
-        XCTAssertEqual(spreadCancelThreshold, 0.12, accuracy: 0.001)
-        XCTAssertEqual(sendThreshold, 72, accuracy: 0.01)
+        XCTAssertEqual(TwoFingerGesturePolicy.activationDelay, .milliseconds(450))
+        XCTAssertEqual(TwoFingerGesturePolicy.activationMoveLimit, 18, accuracy: 0.01)
+        XCTAssertEqual(TwoFingerGesturePolicy.activationSpreadLimit, 0.12, accuracy: 0.001)
+        XCTAssertEqual(TwoFingerGesturePolicy.actionTranslationLimit, 72, accuracy: 0.01)
 
-        XCTAssertEqual(decision(for: 80), .send)
-        XCTAssertEqual(decision(for: -80), .cancel)
-        XCTAssertEqual(decision(for: 10), .neutral)
-        XCTAssertEqual(decision(for: 72), .send)
-        XCTAssertEqual(decision(for: -72), .cancel)
+        XCTAssertEqual(TwoFingerGesturePolicy.decision(for: 80), .send)
+        XCTAssertEqual(TwoFingerGesturePolicy.decision(for: -80), .cancel)
+        XCTAssertEqual(TwoFingerGesturePolicy.decision(for: 10), .neutral)
+        XCTAssertEqual(TwoFingerGesturePolicy.decision(for: 72), .send)
+        XCTAssertEqual(TwoFingerGesturePolicy.decision(for: -72), .cancel)
     }
 
     func testGestureStateTransitions() {
         // Simulates state machine: possible -> began after 450ms, then changed/ended, or failed if moved/spread early.
         enum State { case possible, began, changed, failed, ended }
-        func shouldFail(beforeActivation moved: Double, spread: Double) -> Bool {
-            moved > 18 || spread > 0.12
-        }
-        XCTAssertTrue(shouldFail(beforeActivation: 20, spread: 0.05))
-        XCTAssertTrue(shouldFail(beforeActivation: 5, spread: 0.2))
-        XCTAssertFalse(shouldFail(beforeActivation: 5, spread: 0.05))
+        XCTAssertTrue(TwoFingerGesturePolicy.cancelsPendingActivation(moved: 20, spread: 0.05))
+        XCTAssertTrue(TwoFingerGesturePolicy.cancelsPendingActivation(moved: 5, spread: 0.2))
+        XCTAssertFalse(TwoFingerGesturePolicy.cancelsPendingActivation(moved: 5, spread: 0.05))
+        // A pre-activation horizontal swipe is not allowed to become voice.
+        XCTAssertTrue(TwoFingerGesturePolicy.cancelsPendingActivation(moved: 80, spread: 0))
     }
 
-    // MARK: - Helpers mirroring production logic
+    // MARK: - HMR helper
     private func isExpectedPreviewRevisionSatisfied(localRevision: Int, expected: Int?, baseline: Int) -> Bool {
         guard let expected else { return localRevision > baseline }
         return localRevision >= expected && localRevision > baseline
-    }
-    private func decision(for translation: Double) -> VoiceGestureDecision {
-        translation <= -72 ? .cancel : translation >= 72 ? .send : .neutral
     }
 }
