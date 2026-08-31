@@ -16,41 +16,44 @@ struct ConnectionView: View {
                     self.session = nil
                 }
             } else {
-                VStack(spacing: 22) {
-                    Image(systemName: "ipad.and.arrow.forward")
-                        .font(.system(size: 54))
-                        .foregroundStyle(.tint)
-                    Text("Connect to TouchCode CLI")
-                        .font(.largeTitle.bold())
-                    Text("Enter the bridge address and six-digit code printed by the CLI on your Mac.")
-                        .foregroundStyle(.secondary)
-                    TextField("http://192.168.1.10:4317", text: $bridgeAddress)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .textFieldStyle(.roundedBorder)
-                        .frame(maxWidth: 440)
-                    TextField("6-digit pairing code", text: $pairingCode)
-                        .keyboardType(.numberPad)
-                        .textContentType(.oneTimeCode)
-                        .multilineTextAlignment(.center)
-                        .font(.title2.monospacedDigit().weight(.semibold))
-                        .textFieldStyle(.roundedBorder)
-                        .frame(maxWidth: 240)
-                        .onChange(of: pairingCode) { _, newValue in
-                            let filtered = String(newValue.filter(\.isNumber).prefix(6))
-                            if pairingCode != filtered { pairingCode = filtered }
+                ScrollView {
+                    VStack(spacing: 22) {
+                        Image(systemName: "ipad.and.arrow.forward")
+                            .font(.system(size: 54))
+                            .foregroundStyle(.tint)
+                        Text("Connect to TouchCode CLI")
+                            .font(.largeTitle.bold())
+                        Text("Enter the bridge address and six-digit code printed by the CLI on your Mac.")
+                            .foregroundStyle(.secondary)
+                        TextField("http://192.168.1.10:4317", text: $bridgeAddress)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .textFieldStyle(.roundedBorder)
+                            .frame(maxWidth: 440)
+                        TextField("6-digit pairing code", text: $pairingCode)
+                            .keyboardType(.numberPad)
+                            .textContentType(.oneTimeCode)
+                            .multilineTextAlignment(.center)
+                            .font(.title2.monospacedDigit().weight(.semibold))
+                            .textFieldStyle(.roundedBorder)
+                            .frame(maxWidth: 240)
+                            .onChange(of: pairingCode) { _, newValue in
+                                let filtered = String(newValue.filter(\.isNumber).prefix(6))
+                                if pairingCode != filtered { pairingCode = filtered }
+                            }
+                        Button(isConnecting ? "Pairing…" : "Connect") {
+                            Task { await connect() }
                         }
-                    Button(isConnecting ? "Pairing…" : "Connect") {
-                        Task { await connect() }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                        .disabled(isConnecting || pairingCode.count != 6)
+                        if let errorMessage {
+                            Text(errorMessage).foregroundStyle(.red)
+                        }
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .disabled(isConnecting || pairingCode.count != 6)
-                    if let errorMessage {
-                        Text(errorMessage).foregroundStyle(.red)
-                    }
+                    .padding(40)
                 }
-                .padding(40)
+                .scrollDismissesKeyboard(.interactively)
             }
         }
     }
