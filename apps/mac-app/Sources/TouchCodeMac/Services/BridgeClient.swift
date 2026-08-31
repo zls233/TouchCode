@@ -41,6 +41,16 @@ struct CodingRunSnapshot: Decodable, Equatable {
     var isActive: Bool { status == "queued" || status == "running" }
     var isReviewable: Bool { status == "succeeded" && decision == "pending" && !changedFiles.isEmpty }
     var needsClarification: Bool { outcome == "needs_clarification" }
+    var decisionLabel: String? {
+        switch decision {
+        case "approved": return "Changes kept"
+        case "rejected": return "Changes undone"
+        default: return nil
+        }
+    }
+    var decisionIcon: String {
+        decision == "approved" ? "checkmark.circle.fill" : "arrow.uturn.backward.circle.fill"
+    }
 }
 
 struct BridgeClient {
