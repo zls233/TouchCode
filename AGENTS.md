@@ -1,5 +1,18 @@
 # TouchCode agent workflow
 
+## Installation and startup
+
+Before installing dependencies, building, starting, debugging, or claiming the
+project is running, read and follow [`install_guide.md`](install_guide.md). Treat
+it as the canonical command sequence and acceptance checklist. If repository
+scripts or package metadata conflict with the guide, inspect the current source,
+update the guide in the same change, and report the discrepancy.
+
+Do not claim a complete run from a successful build or open port alone. Keep
+dependency installation, checks, Mac CLI/Bridge startup, authenticated API,
+iPad pairing, simulator verification, and physical-device verification as
+separate evidence.
+
 ## Model routing
 
 - Default executor: `gpt-5.6-luna` with `medium` reasoning. It reads the

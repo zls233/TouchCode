@@ -5,6 +5,13 @@ path runs through the foreground Mac CLI. A native Mac control app can also be
 built and launched locally, but it is a separate demo/control surface and is
 not required for the iPad flow.
 
+## Installation and startup
+
+Humans and coding agents should use
+[`install_guide.md`](install_guide.md) as the canonical installation, startup,
+verification, and troubleshooting entry point. In particular, follow its
+acceptance checklist before reporting that TouchCode is fully running.
+
 ## Implemented flow
 
 1. The CLI verifies a clean Git repository and creates an isolated detached worktree.
@@ -26,12 +33,16 @@ contents. This flow does not accept video and does not use GPT Realtime. Diff,
 Keep, Undo, and merging changes back to the source repository are outside the
 CLI MVP.
 
-## Run
+## Quick start
+
+The complete procedure, including prerequisites, Xcode selection, simulator
+tests, physical-iPad setup, optional Mac app startup, and evidence boundaries,
+is in [`install_guide.md`](install_guide.md).
 
 Install dependencies:
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 ```
 
 Start TouchCode against a clean Git web project. Everything after `--` is the
@@ -50,4 +61,6 @@ enter the bridge address and six-digit code printed by the CLI. The checked-in
 build wrapper is intended for simulator compilation; simulator launch and
 local loopback tests do not prove a complete physical-iPad/LAN UI flow.
 
-See [`docs/mvp-run.md`](docs/mvp-run.md) for setup, safety behavior, and current limitations.
+See [`install_guide.md`](install_guide.md) first and
+[`docs/mvp-run.md`](docs/mvp-run.md) for additional CLI safety behavior and
+current limitations.
