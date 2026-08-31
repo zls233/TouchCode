@@ -37,7 +37,8 @@ struct PreviewWebView: UIViewRepresentable {
 
     func updateUIView(_ container: TouchInputContainer, context: Context) {
         let webView = container.webView
-        if webView.url?.absoluteString != url.absoluteString {
+        if !container.isLoadingURL, webView.url?.absoluteString != url.absoluteString {
+            container.isLoadingURL = true
             webView.load(URLRequest(url: url))
         }
         container.enabled = drawingEnabled
@@ -70,7 +71,22 @@ struct PreviewWebView: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            if let container = webView.superview as? TouchInputContainer {
+                container.isLoadingURL = false
+            }
             controller.didReceiveViewportChange()
+        }
+
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            if let container = webView.superview as? TouchInputContainer {
+                container.isLoadingURL = false
+            }
+        }
+
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            if let container = webView.superview as? TouchInputContainer {
+                container.isLoadingURL = false
+            }
         }
     }
 }
@@ -96,6 +112,7 @@ final class TouchInputContainer: UIView {
     var onViewportChange: (() -> Void)?
     var enabled = true { didSet { canvas.isUserInteractionEnabled = enabled } }
     var syncingDrawing = false
+    var isLoadingURL = false
     var drawing: PKDrawing {
         didSet {
             guard !syncingDrawing, canvas.drawing != drawing else { return }

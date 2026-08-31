@@ -67,7 +67,7 @@ struct WorkspaceView: View {
                     controlDock
                 }
                 .padding(.horizontal, 18)
-                .padding(.bottom, 14)
+                .padding(.bottom, 18)
             }
         }
         .onDisappear {
