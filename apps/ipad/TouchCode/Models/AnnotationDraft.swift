@@ -199,7 +199,7 @@ struct AnnotationDraft {
         let targetPerCapture = min(perCaptureLimit, budgetBytes / count)
 
         return captures.map { cap in
-            var data = cap.imageData
+            let data = cap.imageData
             if data.count <= targetPerCapture { return cap }
             // Try recompression ladder
             guard let image = UIImage(data: data) else { return cap }
