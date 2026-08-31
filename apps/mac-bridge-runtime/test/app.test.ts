@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -237,5 +237,30 @@ test("accepts an annotation-only V2 draft and persists every viewport capture", 
   assert.equal(received?.visualContext?.screenshotPaths?.length, 2);
   assert.deepEqual(received?.visualContext?.elements, elements);
   assert.match(received?.intent.instruction ?? "", /If the intended change is unclear/);
+  await app.close();
+});
+
+test("cleans up captures when a later viewport has an invalid JPEG", async () => {
+  const inputDirectory = await mkdtemp(path.join(tmpdir(), "touchcode-partial-input-"));
+  const agents = new CodingAgentRegistry();
+  agents.register({ kind: "codex", async isAvailable() { return true; }, async run() {
+    throw new Error("provider should not run");
+  } });
+  const fakeSessions = {
+    authorize() { return { sessionId: "partial-session", projectId: "project-1", worktreePath: "/tmp/touchcode-worktree" }; },
+    async inputDirectory() { return inputDirectory; },
+    setLatestRun() {},
+  } as unknown as DemoSessionManager;
+  const app = await createBridgeApp({ codingAgents: agents, demoSessions: fakeSessions });
+  const valid = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(100)]).toString("base64");
+  const invalid = Buffer.concat([Buffer.from("not-jpeg"), Buffer.alloc(100)]).toString("base64");
+  const viewport = { url: "http://127.0.0.1:5173", width: 1024, height: 768, scrollX: 0, scrollY: 0, zoomScale: 1, devicePixelRatio: 2 };
+  const capture = (image: string) => ({ annotatedImageBase64: image, viewport, annotationBounds: { x: 0, y: 0, width: 1, height: 1 }, elements: [] });
+  const response = await app.inject({
+    method: "POST", url: "/v1/sessions/partial-session/edits",
+    payload: { type: "visual.run.v2", draftId: "partial", inputMode: "annotation", captures: [capture(valid), capture(invalid)] },
+  });
+  assert.equal(response.statusCode, 400);
+  assert.deepEqual(await readdir(inputDirectory), []);
   await app.close();
 });

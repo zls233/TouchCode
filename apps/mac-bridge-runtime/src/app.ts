@@ -1,5 +1,5 @@
 import Fastify from "fastify";
-import { writeFile } from "node:fs/promises";
+import { unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   acceptedVisualRunRequestSchema,
@@ -278,14 +278,23 @@ async function persistCaptures(
   const totalBytes = rawCaptures.reduce((total, capture) => total + Buffer.byteLength(capture.image, "base64"), 0);
   if (totalBytes > 12 * 1024 * 1024) throw new Error("Annotation captures exceed the 12 MiB request limit");
   const inputDirectory = await sessions.inputDirectory(sessionId);
-  return Promise.all(rawCaptures.map(async (capture) => {
-    const pathName = path.join(inputDirectory, `${crypto.randomUUID()}.jpg`);
-    await writeFile(pathName, decodeJPEG(capture.image), { flag: "wx" });
-    return {
-      path: pathName,
-      viewportWidth: capture.viewportWidth,
-      viewportHeight: capture.viewportHeight,
-      ...(capture.elements ? { elements: capture.elements } : {}),
-    };
-  }));
+  const written: string[] = [];
+  try {
+    const persisted = [];
+    for (const capture of rawCaptures) {
+      const pathName = path.join(inputDirectory, `${crypto.randomUUID()}.jpg`);
+      await writeFile(pathName, decodeJPEG(capture.image), { flag: "wx" });
+      written.push(pathName);
+      persisted.push({
+        path: pathName,
+        viewportWidth: capture.viewportWidth,
+        viewportHeight: capture.viewportHeight,
+        ...(capture.elements ? { elements: capture.elements } : {}),
+      });
+    }
+    return persisted;
+  } catch (error) {
+    await Promise.all(written.map((filePath) => unlink(filePath).catch(() => undefined)));
+    throw error;
+  }
 }
