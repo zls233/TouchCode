@@ -45,9 +45,10 @@ export class WorkspaceCheckpoint {
   async collectChanges(): Promise<{ changedFiles: string[]; diff: string }> {
     // Compare current worktree against the pre-run index snapshot.
     // Use temporary index's contents as base: diff against HEAD plus untracked.
-    const [nameOnly, diff, untracked] = await Promise.all([
+    const [nameOnly, diff, stagedDiff, untracked] = await Promise.all([
       git(this.root, ["diff", "--name-only", "-z"]).then(zeroSeparated).catch(() => [] as string[]),
       git(this.root, ["diff", "--no-color"]).catch(() => ""),
+      git(this.root, ["diff", "--cached", "--no-color"]).catch(() => ""),
       git(this.root, ["ls-files", "--others", "--exclude-standard", "-z"]).then(zeroSeparated).catch(() => [] as string[]),
     ]);
     // Also include staged changes vs HEAD
@@ -58,7 +59,8 @@ export class WorkspaceCheckpoint {
     }
     const changedFiles = Array.from(changedSet).sort();
     // Limit diff size to avoid huge payloads (64 KiB)
-    const trimmedDiff = diff.length > 64 * 1024 ? diff.slice(0, 64 * 1024) + "\n… diff truncated" : diff;
+    const combinedDiff = [diff, stagedDiff].filter(Boolean).join("\n");
+    const trimmedDiff = combinedDiff.length > 64 * 1024 ? combinedDiff.slice(0, 64 * 1024) + "\n… diff truncated" : combinedDiff;
     return { changedFiles, diff: trimmedDiff };
   }
 
