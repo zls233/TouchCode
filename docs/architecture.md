@@ -1,57 +1,38 @@
-# TouchCode MVP architecture
-
-## Responsibility boundary
+# TouchCode CLI MVP architecture
 
 ```text
-iPad webpage + raw Pencil marks
-  -> TouchCode Mac bridge
-     -> selected CodingAgentProvider
-        -> Codex / Claude Code / custom agent
-     <- run events and code diff
-  <- preview, status, keep or undo
+iPad WKWebView + Pencil screenshot + typed text
+  -> authenticated LAN Bridge
+     -> Codex SDK with local_image
+        -> isolated Git worktree
+        -> existing dev server / HMR
+  <- run status and dev-server-refreshed webpage
 ```
 
-TouchCode Mac does not pretend to be a coding agent and does not independently
-decide how source code should change. It performs four product responsibilities:
+## Boundaries
 
-1. Connect the iPad to the local development environment.
-2. Package the annotated screenshot, visible DOM/React candidates and user
-   instruction into a provider-neutral request. Gesture meaning is interpreted
-   by the multimodal coding model, not by a local classifier.
-3. Enforce project grants, worktree isolation and user change decisions.
-4. Present provider progress, diff, preview and rollback controls.
+- The iPad captures one current-viewport JPEG with raw Pencil marks composited on top.
+- The current editing composer accepts typed text and optional speech
+  transcription. Voice-originated text is marked `inputMode: "voice"` in the
+  existing protocol; physical-device microphone permission and recognition remain
+  unverified.
+- The iPad attempts to read optional visible-element context from the preview's
+  `window.touchCodeBridge.visibleContext()` hook. If the hook is absent, it sends
+  an empty context list; there is no guaranteed DOM-to-source mapping.
+- The Bridge stores input images outside the editable worktree and passes their local paths to Codex.
+- Codex runs with workspace-write access, no network, and no interactive approvals.
+- The original source checkout must be clean and is never the coding agent's working directory.
+- The created detached worktree is preserved after the CLI exits so changes remain inspectable.
 
-## Mac application
+There is no required webpage instrumentation or guaranteed mapping from visual
+marks to DOM nodes, framework components, selectors, or source locations. When
+the optional context hook is available, its visible-element data is included as
+additional model input; the model still uses the image and repository contents
+to infer the requested source change.
 
-The native SwiftUI application is the user-facing control plane. It displays:
+## Deferred
 
-- bridge and iPad connection status;
-- authorized project and preview status;
-- the user-selected coding agent;
-- coding run progress, diff, Keep and Undo controls.
-
-The TypeScript bridge runtime is an internal component. It is separated from
-the UI so the network and provider contracts can be tested without launching a
-desktop window. Production packaging will start and supervise this runtime from
-the Mac app.
-
-## Coding agent providers
-
-`CodingAgentProvider` is the only interface the bridge uses to invoke a coding
-agent. The first implementation uses the official Codex SDK with a
-workspace-write sandbox, no network access and no interactive approvals. Future
-Claude Code or custom adapters must implement the same provider-neutral result
-and event types.
-
-The provider receives a granted worktree path, edit intent, annotated image and
-supporting visible-element context.
-It never receives authority to modify the original project directly.
-
-## Current limitations
-
-- The runnable slice uses a generated isolated demo workspace, not arbitrary
-  user-selected projects yet.
-- Diff review, Keep, Undo and durable run history are not wired into the UI.
-- Pairing currently uses a manually entered LAN address and has no authentication.
-- Voice and GPT Realtime are not part of this text-plus-image MVP.
-- The iPad target requires full Xcode and has not been built in this environment.
+- Video input and GPT Realtime.
+- A fuller native Mac control application beyond the current local demo/control surface.
+- Diff review, Keep/Undo, and merging worktree changes back to the source branch.
+- Remote internet transport, durable sessions, QR/Bonjour discovery, and production packaging.

@@ -24,6 +24,8 @@ struct ContentView: View {
         .task {
             await workspace.refreshBridgeStatus()
         }
+        .task(id: workspace.demoSession?.sessionId) {
+            await workspace.monitorDemoSession()
+        }
     }
 }
-

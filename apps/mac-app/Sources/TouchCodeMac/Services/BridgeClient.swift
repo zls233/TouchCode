@@ -9,12 +9,38 @@ struct BridgeHealth: Decodable, Equatable {
 
 struct DemoSession: Decodable, Equatable {
     let sessionId: String
-    let projectId: String
-    let worktreePath: String
+    let projectId: String?
+    let worktreePath: String?
     let previewURL: String
     let bridgeURL: String
-    let port: Int
+    let port: Int?
+    let status: String?
+    let pairingCode: String
+    let ipadConnected: Bool
+    let latestRunId: String?
+    let errorMessage: String?
+}
+
+struct CodingRunSnapshot: Decodable, Equatable {
+    let runId: String
+    let sessionId: String
+    let provider: String
+    let stage: String
     let status: String
+    let decision: String
+    let message: String
+    let summary: String
+    let diff: String
+    let changedFiles: [String]
+    let previewRevision: String?
+    let outcome: String?
+    let clarificationQuestion: String?
+    let startedAt: String
+    let updatedAt: String
+
+    var isActive: Bool { status == "queued" || status == "running" }
+    var isReviewable: Bool { status == "succeeded" && decision == "pending" && !changedFiles.isEmpty }
+    var needsClarification: Bool { outcome == "needs_clarification" }
 }
 
 struct BridgeClient {
@@ -41,5 +67,64 @@ struct BridgeClient {
             throw URLError(.badServerResponse)
         }
         return try JSONDecoder().decode(DemoSession.self, from: data)
+    }
+
+    func demoSession(_ sessionId: String) async throws -> DemoSession {
+        let url = endpoint
+            .appending(path: "v1/demo-sessions")
+            .appending(path: sessionId)
+        return try await get(url, as: DemoSession.self)
+    }
+
+    func codingRun(sessionId: String, runId: String) async throws -> CodingRunSnapshot {
+        let url = endpoint
+            .appending(path: "v1/demo-sessions")
+            .appending(path: sessionId)
+            .appending(path: "runs")
+            .appending(path: runId)
+        return try await get(url, as: CodingRunSnapshot.self)
+    }
+
+    func decide(sessionId: String, runId: String, action: String) async throws -> CodingRunSnapshot {
+        let url = endpoint
+            .appending(path: "v1/demo-sessions")
+            .appending(path: sessionId)
+            .appending(path: "runs")
+            .appending(path: runId)
+            .appending(path: action)
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 15
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response, data: data, expectedStatus: 200)
+        return try JSONDecoder().decode(CodingRunSnapshot.self, from: data)
+    }
+
+    private func get<T: Decodable>(_ url: URL, as type: T.Type) async throws -> T {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 3
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response, data: data, expectedStatus: 200)
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+
+    private func validate(_ response: URLResponse, data: Data, expectedStatus: Int) throws {
+        guard let http = response as? HTTPURLResponse, http.statusCode == expectedStatus else {
+            let message = (try? JSONDecoder().decode(BridgeErrorBody.self, from: data).message)
+                ?? "TouchCode Bridge returned an invalid response."
+            throw BridgeClientError.requestFailed(message)
+        }
+    }
+}
+
+private struct BridgeErrorBody: Decodable { let message: String? }
+
+private enum BridgeClientError: LocalizedError {
+    case requestFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .requestFailed(let message): message
+        }
     }
 }

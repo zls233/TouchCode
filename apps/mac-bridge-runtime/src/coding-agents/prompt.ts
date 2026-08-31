@@ -1,41 +1,24 @@
 import type { CodingRunRequest } from "@touchcode/protocol";
 
 export function buildCodingPrompt(request: CodingRunRequest) {
-  const { intent, selection, visualContext } = request;
-
-  if (visualContext) {
-    return [
-      "You are the coding agent selected by the user through TouchCode.",
-      "The attached image is a live webpage screenshot with the user's raw Apple Pencil marks composited on top.",
-      "Interpret the marks visually together with the text request. Do not assume a hard-coded circle, arrow, or strike gesture rule.",
-      "The visible DOM/React candidates below are supporting evidence. Their rectangles use the screenshot viewport coordinate space.",
-      "Inspect the current workspace and make the smallest source-code change that satisfies the request.",
-      "Do not modify files outside the workspace, install dependencies, or edit .touchcode-inputs.",
-      "Do not run broad checks; summarize the source files changed and what changed.",
-      "",
-      `User request: ${intent.instruction}`,
-      `Viewport: ${visualContext.viewportWidth} x ${visualContext.viewportHeight}`,
-      "Visible element candidates:",
-      JSON.stringify(visualContext.elements, null, 2),
-    ].join("\n");
-  }
-
-  if (!selection) throw new Error("A visual context or element selection is required");
-  const source = selection.target.source;
-  const sourceDescription = source
-    ? `${source.file}:${source.line}:${source.column}`
-    : "Source location unavailable; inspect the DOM context and project before editing.";
-
+  const visualContext = request.visualContext;
+  if (!visualContext) throw new Error("Visual context is required for a coding run");
   return [
     "You are the coding agent selected by the user through TouchCode.",
-    "Make the smallest change that satisfies the request in the current workspace.",
+    "The attached image is the current webpage with the user's raw Apple Pencil marks composited on top.",
+    "Interpret the marks visually together with the user's typed or speech-transcribed instruction.",
+    "There is deliberately no DOM, component, selector, or source-location metadata.",
+    "Inspect the current workspace and make the smallest source-code change that satisfies the request.",
     "Do not modify files outside the workspace or install dependencies.",
-    "Do not run broad checks; summarize the source files changed and what changed.",
+    "Do not edit the attached screenshot; edit the webpage source code.",
+    "If the requested change is ambiguous, do not edit files. Ask one concise clarification question.",
+    "End with exactly one JSON object on its own line: {\"outcome\":\"applied|needs_clarification|no_change\",\"summary\":\"...\",\"clarificationQuestion\":null|string}.",
     "",
-    `User request: ${intent.instruction}`,
-    `Selected element: <${selection.target.tag}> ${selection.target.text}`,
-    `React component: ${selection.target.componentName ?? "unknown"}`,
-    `Source: ${sourceDescription}`,
-    `DOM path: ${selection.target.domPath}`,
+    `User request: ${request.intent.instruction}`,
+    `Input mode: ${request.intent.inputMode}`,
+    `Screenshot viewport: ${visualContext.viewportWidth} x ${visualContext.viewportHeight}`,
+    visualContext.screenshotPaths && visualContext.screenshotPaths.length > 1
+      ? `The request contains ${visualContext.screenshotPaths.length} related scroll/zoom captures; consider all of them before editing.`
+      : "",
   ].join("\n");
 }

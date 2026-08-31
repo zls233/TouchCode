@@ -1,6 +1,6 @@
 const features = [
   ["Pencil-native", "Circle, point, or strike through the part you want to change."],
-  ["Context-aware", "TouchCode connects what you see to the React source behind it."],
+  ["Visual instructions", "TouchCode sends your marked screenshot and instruction to the coding agent."],
   ["Safe by default", "Review the live result before keeping a change in your project."],
 ] as const;
 
@@ -20,7 +20,7 @@ export default function App() {
         <p className="eyebrow">Build on Mac. Direct on iPad.</p>
         <h1>Point at your interface.<br />Tell your coding agent what to change.</h1>
         <p className="lede">
-          TouchCode turns Apple Pencil annotations into precise React source context.
+          TouchCode turns Apple Pencil annotations into visual webpage editing instructions.
         </p>
         <div className="actions">
           <button className="primaryButton">Start creating</button>
@@ -53,4 +53,3 @@ export default function App() {
     </main>
   );
 }
-

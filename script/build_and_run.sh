@@ -16,6 +16,12 @@ APP_BINARY="$APP_MACOS/$APP_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 PNPM_PATH="$(command -v pnpm)"
 
+# SwiftPM's build service must come from a full Xcode installation. Keep this
+# command reproducible when the machine's global xcode-select points at the
+# standalone CommandLineTools package.
+DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode-beta.app/Contents/Developer}"
+export DEVELOPER_DIR
+
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 
 swift build --package-path "$PACKAGE_DIR" --build-system native

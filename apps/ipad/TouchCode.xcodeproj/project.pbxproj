@@ -15,6 +15,10 @@
 		A10000000000000000000006 /* PencilOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000006 /* PencilOverlay.swift */; };
 		A10000000000000000000007 /* ConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* ConnectionView.swift */; };
 		A10000000000000000000008 /* WorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000008 /* WorkspaceView.swift */; };
+		A10000000000000000000009 /* SpeechInputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000B /* SpeechInputController.swift */; };
+		A1000000000000000000000A /* AnnotationDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000C /* AnnotationDraft.swift */; };
+		A20000000000000000000001 /* AnnotationDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000001 /* AnnotationDraftTests.swift */; };
+		A20000000000000000000002 /* HMRAndGestureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000002 /* HMRAndGestureTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,22 +32,38 @@
 		B10000000000000000000008 /* WorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceView.swift; sourceTree = "<group>"; };
 		B10000000000000000000009 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B1000000000000000000000A /* TouchCode.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TouchCode.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1000000000000000000000B /* SpeechInputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechInputController.swift; sourceTree = "<group>"; };
+		B1000000000000000000000C /* AnnotationDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationDraft.swift; sourceTree = "<group>"; };
+		B20000000000000000000001 /* AnnotationDraftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationDraftTests.swift; sourceTree = "<group>"; };
+		B20000000000000000000002 /* HMRAndGestureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HMRAndGestureTests.swift; sourceTree = "<group>"; };
+		B20000000000000000000003 /* TouchCodeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TouchCodeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFrameworksBuildPhase section */
-		C10000000000000000000001 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
+
+
+/* Begin PBXContainerItemProxy section */
+		E20000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E10000000000000000000002 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E10000000000000000000001;
+			remoteInfo = TouchCode;
 		};
-/* End PBXFrameworksBuildPhase section */
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		E20000000000000000000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E10000000000000000000001 /* TouchCode */;
+			targetProxy = E20000000000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXGroup section */
 		D10000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
+				D20000000000000000000001 /* TouchCodeTests */,
 				D10000000000000000000002 /* TouchCode */,
 				D10000000000000000000009 /* Products */,
 			);
@@ -67,6 +87,8 @@
 			isa = PBXGroup;
 			children = (
 				B10000000000000000000002 /* TouchCodeModels.swift */,
+				B1000000000000000000000B /* SpeechInputController.swift */,
+				B1000000000000000000000C /* AnnotationDraft.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -113,6 +135,15 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		D20000000000000000000001 /* TouchCodeTests */ = {
+			isa = PBXGroup;
+			children = (
+				B20000000000000000000001 /* AnnotationDraftTests.swift */,
+				B20000000000000000000002 /* HMRAndGestureTests.swift */,
+			);
+			path = TouchCodeTests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -133,6 +164,24 @@
 			productReference = B1000000000000000000000A /* TouchCode.app */;
 			productType = "com.apple.product-type.application";
 		};
+		E20000000000000000000003 /* TouchCodeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F20000000000000000000002 /* Build configuration list for PBXNativeTarget "TouchCodeTests" */;
+			buildPhases = (
+				C20000000000000000000001 /* Sources */,
+				C20000000000000000000002 /* Frameworks */,
+				C20000000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E20000000000000000000002 /* PBXTargetDependency */,
+			);
+			name = TouchCodeTests;
+			productName = TouchCodeTests;
+			productReference = B20000000000000000000003 /* TouchCodeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -143,6 +192,10 @@
 				LastSwiftUpdateCheck = 1600;
 				LastUpgradeCheck = 2700;
 				TargetAttributes = {
+					E20000000000000000000003 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = E10000000000000000000001;
+					},
 					E10000000000000000000001 = {
 						CreatedOnToolsVersion = 16.0;
 					};
@@ -162,22 +215,23 @@
 			projectRoot = "";
 			targets = (
 				E10000000000000000000001 /* TouchCode */,
+				E20000000000000000000003 /* TouchCodeTests */,
 			);
 		};
 /* End PBXProject section */
 
-/* Begin PBXResourcesBuildPhase section */
-		C10000000000000000000003 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXResourcesBuildPhase section */
+
+
+
+
+
+
+
+
+
 
 /* Begin PBXSourcesBuildPhase section */
-		C10000000000000000000002 /* Sources */ = {
+C10000000000000000000002 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -189,10 +243,55 @@
 				A10000000000000000000006 /* PencilOverlay.swift in Sources */,
 				A10000000000000000000007 /* ConnectionView.swift in Sources */,
 				A10000000000000000000008 /* WorkspaceView.swift in Sources */,
+				A10000000000000000000009 /* SpeechInputController.swift in Sources */,
+				A1000000000000000000000A /* AnnotationDraft.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+C20000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A20000000000000000000001 /* AnnotationDraftTests.swift in Sources */,
+				A20000000000000000000002 /* HMRAndGestureTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXFrameworksBuildPhase section */
+C10000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+C20000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXResourcesBuildPhase section */
+C10000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+C20000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
 		F10000000000000000000003 /* Debug */ = {
@@ -229,7 +328,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -270,7 +369,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
@@ -314,6 +413,40 @@
 			};
 			name = Release;
 		};
+		F20000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.touchcode.ipad.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TouchCode.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TouchCode";
+			};
+			name = Debug;
+		};
+		F20000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.touchcode.ipad.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TouchCode.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TouchCode";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -331,6 +464,15 @@
 			buildConfigurations = (
 				F10000000000000000000005 /* Debug */,
 				F10000000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F20000000000000000000002 /* Build configuration list for PBXNativeTarget "TouchCodeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F20000000000000000000003 /* Debug */,
+				F20000000000000000000004 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

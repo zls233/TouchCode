@@ -3,6 +3,39 @@ import type { CodingRunRequest, CodingRunResult } from "@touchcode/protocol";
 import { buildCodingPrompt } from "./prompt.js";
 import type { CodingAgentProvider, CodingRunObserver, CodingRunStage } from "./provider.js";
 
+type ProviderOutcome = "applied" | "needs_clarification" | "no_change";
+
+const outcomeSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["outcome", "summary", "clarificationQuestion"],
+  properties: {
+    outcome: { type: "string", enum: ["applied", "needs_clarification", "no_change"] },
+    summary: { type: "string" },
+    clarificationQuestion: { type: ["string", "null"] },
+  },
+} as const;
+
+function parseStructuredOutcome(message: string): {
+  outcome: ProviderOutcome;
+  summary: string;
+  clarificationQuestion: string | null;
+} {
+  try {
+    const parsed = JSON.parse(message) as { outcome?: ProviderOutcome; summary?: string; clarificationQuestion?: string | null };
+    if (!parsed.outcome || !["applied", "needs_clarification", "no_change"].includes(parsed.outcome)) {
+      throw new Error("Codex returned an invalid visual-edit outcome");
+    }
+    return {
+      outcome: parsed.outcome,
+      summary: parsed.summary?.trim() || "Codex completed.",
+      clarificationQuestion: parsed.clarificationQuestion?.trim() || null,
+    };
+  } catch (error) {
+    throw new Error("Codex did not return the required structured visual-edit outcome", { cause: error });
+  }
+}
+
 function stageForEvent(event: ThreadEvent): CodingRunStage | undefined {
   if (event.type === "thread.started") return "connecting";
   if (event.type === "turn.started") return "reasoning";
@@ -28,8 +61,20 @@ export class CodexSdkProvider implements CodingAgentProvider {
     const runId = crypto.randomUUID();
     let providerThreadId: string | undefined;
     let summary = "Codex completed without a final message.";
-
     observe?.({ runId, provider: this.kind, stage: "queued", message: "Queued for Codex" });
+    const visualContext = request.visualContext;
+    if (!visualContext) {
+      const message = "Visual context is required for a coding run";
+      observe?.({ runId, provider: this.kind, stage: "failed", message });
+      return {
+        runId,
+        provider: this.kind,
+        status: "failed",
+        summary: message,
+        outcome: "failed",
+        clarificationQuestion: null,
+      };
+    }
 
     try {
       const thread = this.codex.startThread({
@@ -40,14 +85,13 @@ export class CodexSdkProvider implements CodingAgentProvider {
         webSearchMode: "disabled",
         threadSource: "touchcode-mac-bridge",
       });
-      const prompt = buildCodingPrompt(request);
-      const input = request.visualContext
-        ? [
-            { type: "text" as const, text: prompt },
-            { type: "local_image" as const, path: request.visualContext.screenshotPath },
-          ]
-        : prompt;
-      const streamed = await thread.runStreamed(input);
+      const streamed = await thread.runStreamed([
+        { type: "text", text: buildCodingPrompt(request) },
+        ...(visualContext.screenshotPaths ?? [visualContext.screenshotPath]).map((imagePath) => ({
+          type: "local_image" as const,
+          path: imagePath,
+        })),
+      ], { outputSchema: outcomeSchema });
 
       for await (const event of streamed.events) {
         if (event.type === "thread.started") providerThreadId = event.thread_id;
@@ -60,19 +104,20 @@ export class CodexSdkProvider implements CodingAgentProvider {
             runId,
             provider: this.kind,
             stage,
-            message: stage === "editing" ? "Coding agent is updating the worktree" : `Codex ${stage}`,
+            message: stage === "editing" ? "Codex is updating the webpage" : `Codex ${stage}`,
           });
         }
         if (event.type === "turn.failed") throw new Error(event.error.message);
         if (event.type === "error") throw new Error(event.message);
       }
 
+      const outcome = parseStructuredOutcome(summary);
       return {
         runId,
         provider: this.kind,
         ...(providerThreadId ? { providerThreadId } : {}),
         status: "succeeded",
-        summary,
+        ...outcome,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Codex run failed";
@@ -83,6 +128,8 @@ export class CodexSdkProvider implements CodingAgentProvider {
         ...(providerThreadId ? { providerThreadId } : {}),
         status: "failed",
         summary: message,
+        outcome: "failed",
+        clarificationQuestion: null,
       };
     }
   }

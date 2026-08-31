@@ -38,13 +38,31 @@ struct OverviewView: View {
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                         Spacer()
-                        Button(workspace.demoSession == nil ? "Start MVP Demo" : "Demo Running") {
+                        Button(workspace.demoSession?.status == "running" ? "Demo Running" : "Start MVP Demo") {
                             Task { await workspace.startDemo() }
                         }
-                        .disabled(workspace.demoSession != nil)
+                        .disabled(workspace.demoSession?.status == "running")
                     }
                     if let session = workspace.demoSession {
-                        LabeledContent("iPad bridge address", value: session.bridgeURL)
+                        HStack(alignment: .firstTextBaseline) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("iPad pairing code")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Text(session.pairingCode)
+                                    .font(.system(.title, design: .rounded, weight: .bold))
+                                    .monospacedDigit()
+                                    .textSelection(.enabled)
+                            }
+                            Spacer()
+                            VStack(alignment: .trailing, spacing: 4) {
+                                Text("Bridge address")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Text(session.bridgeURL)
+                                    .textSelection(.enabled)
+                            }
+                        }
                         LabeledContent("Preview", value: session.previewURL)
                     }
                     if let error = workspace.sessionError {
@@ -53,6 +71,54 @@ struct OverviewView: View {
                     }
                 }
                 .padding(6)
+            }
+
+            if let run = workspace.latestRun {
+                GroupBox("Latest coding run") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Label(run.message, systemImage: runIcon(run))
+                            Spacer()
+                            Text(run.stage.capitalized)
+                                .foregroundStyle(.secondary)
+                        }
+                        if !run.summary.isEmpty {
+                            Text(run.summary)
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(3)
+                        }
+                        if !run.changedFiles.isEmpty {
+                            Text("Changed: \(run.changedFiles.joined(separator: ", "))")
+                                .font(.caption.monospaced())
+                                .foregroundStyle(.secondary)
+                        }
+                        if run.isReviewable {
+                            HStack {
+                                Button("Review Diff") { workspace.selection = .project }
+                                Spacer()
+                                Button("Undo", role: .destructive) {
+                                    Task { await workspace.undoLatestRun() }
+                                }
+                                Button("Keep Changes") {
+                                    Task { await workspace.keepLatestRun() }
+                                }
+                                .buttonStyle(.borderedProminent)
+                            }
+                            .disabled(workspace.isReviewing)
+                        } else if run.decision != "pending" {
+                            Label(
+                                run.decision == "kept" ? "Changes kept" : "Changes undone",
+                                systemImage: run.decision == "kept" ? "checkmark.circle.fill" : "arrow.uturn.backward.circle.fill"
+                            )
+                            .foregroundStyle(run.decision == "kept" ? .green : .orange)
+                        }
+                        if let error = workspace.reviewError {
+                            Text(error).foregroundStyle(.red)
+                        }
+                    }
+                    .padding(6)
+                }
             }
 
             Spacer()
@@ -67,6 +133,12 @@ struct OverviewView: View {
                 }
             }
         }
+    }
+
+    private func runIcon(_ run: CodingRunSnapshot) -> String {
+        if run.status == "failed" { return "exclamationmark.triangle.fill" }
+        if run.isActive { return "hourglass" }
+        return "checkmark.circle.fill"
     }
 
     private var bridgeStatusText: String {

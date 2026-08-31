@@ -1,51 +1,72 @@
-# TouchCode two-device MVP
-
-## What this slice proves
-
-The Mac application starts the local bridge and prepares an isolated React/Vite
-workspace. The iPad loads that site directly in `WKWebView`. Apple Pencil ink is
-kept as raw drawing data and composited onto a fresh webpage screenshot only
-when the user submits a request. The bridge saves that image inside the isolated
-workspace and invokes Codex with:
-
-- the annotated image;
-- the text instruction;
-- visible DOM rectangles and React source hints.
-
-Codex edits the demo workspace and Vite HMR updates the page already open on the
-iPad. TouchCode does not classify circles, arrows, or strike-through gestures.
+# Run the TouchCode CLI MVP
 
 ## Prerequisites
 
-- macOS 14 or later.
-- Node.js 22 and pnpm.
-- Full Xcode with an iPadOS 18 SDK.
-- An iPad and Mac on the same local network.
-- A working local Codex login for `@openai/codex-sdk`.
+- macOS with Node.js 22+, pnpm, Git, and Xcode.
+- A web project that is already runnable and committed with a clean Git status.
+- A local Codex login usable by `@openai/codex-sdk`.
+- Mac and iPad on the same trusted local network.
 
-## Manual run
+## Start the Mac CLI
 
-1. At the repository root, install workspace dependencies with `pnpm install`.
-2. Launch the Mac application with `./script/build_and_run.sh`.
-3. In the Mac app, click **Start MVP Demo** and wait for the LAN bridge and
-   preview addresses to appear.
-4. Open `apps/ipad/TouchCode.xcodeproj` in Xcode.
-5. Choose your development team and a connected iPad, then run TouchCode.
-6. Enter the Mac app's `http://<mac-lan-ip>:4317` bridge address and tap
-   **Start MVP Session**.
-7. Draw directly over an element. Tap the conversation bubble that appears by
-   the ink, enter a change such as “Make this button black,” and submit.
-8. Keep the iPad page open. When Codex completes, Vite HMR displays the source
-   change without reconnecting.
+From this repository:
 
-The app requests local-network access on first use. Plain HTTP is intentional
-for this same-LAN development MVP and must not be exposed to an untrusted
-network.
+```bash
+pnpm install
+pnpm touchcode \
+  --project /absolute/path/to/your-web-project \
+  --cwd . \
+  --preview-port 5173 \
+  -- pnpm dev -- --host 0.0.0.0 --port 5173
+```
 
-## Deliberately deferred
+Use `--cwd apps/web` when the preview package lives in a monorepo subdirectory.
+The preview command is executed directly, without a shell. TouchCode also sets
+`HOST=0.0.0.0` and `PORT` for frameworks that read those variables.
 
-- Bonjour/QR pairing and authenticated sessions.
-- Selecting a real project and managing its dev-server command.
-- Diff approval, Git rollback and change persistence.
-- Voice input and GPT Realtime.
-- Production signing, packaging and App Store distribution.
+The CLI refuses a dirty repository, detached source checkout, a `--cwd` outside
+the repository, or an occupied preview port. It creates a detached worktree under
+`~/Library/Application Support/TouchCode/worktrees` and reuses existing
+`node_modules` through local symlinks when available; it never installs project dependencies.
+
+## Connect the iPad
+
+1. If `xcode-select -p` reports CommandLineTools, use the repository-local
+   Xcode wrapper below. It sets `DEVELOPER_DIR` for this command only and does
+   not change the system-wide developer directory:
+
+   ```bash
+   ./script/build_ipad.sh
+   # Or choose another installed Xcode explicitly:
+   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./script/build_ipad.sh
+   ```
+
+   The default destination is the iPad Pro 13-inch (M5) simulator. Override it
+   with `TOUCHCODE_XCODE_DESTINATION='platform=iOS Simulator,id=SIMULATOR_ID'`
+   when needed. For device signing and launch, open
+   `apps/ipad/TouchCode.xcodeproj` in Xcode and run it on an iPad.
+2. Enter the `Bridge` URL and six-digit `Pairing code` printed by the CLI.
+3. Use the pencil button to switch between webpage interaction and annotation.
+4. Draw on the webpage screenshot.
+5. Type a request, or tap the microphone to transcribe one. The iPad composer
+   sends voice-originated text with `inputMode: "voice"`; microphone permission,
+   speech recognition, and the permission prompt still require physical-device
+   verification and are not part of the verified run path.
+6. Tap **Update**. Keep both the CLI and preview command running.
+7. When Codex succeeds, the dev server/HMR can update the preview already open
+   on the iPad; the client clears the submitted ink and instruction. No separate
+   forced reload is issued by the client.
+
+Stopping with Ctrl-C terminates the preview and Bridge but preserves the isolated
+worktree. The CLI prints that worktree path so it can be inspected manually.
+
+## Security and evidence boundary
+
+Pairing creates a high-entropy per-session token; every session request requires
+it. Plain HTTP is limited to this trusted-LAN MVP. The Bridge rejects non-JPEG
+image uploads and caps request size. A completed automated test with a mock
+provider proves transport and orchestration, but it is not evidence of a paid,
+live Codex edit, a complete physical-iPad/LAN UI flow, or real Apple Pencil
+hardware behavior. The local simulator build/launch and loopback pairing
+checks are narrower evidence: they cover compilation, process startup, and
+HTTP contracts, not end-to-end visual interaction on a physical device.

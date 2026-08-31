@@ -1,39 +1,53 @@
 # TouchCode
 
-TouchCode connects an iPad interaction surface to coding agents running on a Mac.
+TouchCode is an iPad-to-Mac visual webpage editing MVP. The supported editing
+path runs through the foreground Mac CLI. A native Mac control app can also be
+built and launched locally, but it is a separate demo/control surface and is
+not required for the iPad flow.
 
-The Mac component is a **bridge application**, not an AI agent. It owns device
-pairing, project permissions, browser context, previews, worktrees and change
-review. Codex, Claude Code or another user-selected coding agent owns code
-reasoning and editing.
+## Implemented flow
 
-## Current vertical slice
+1. The CLI verifies a clean Git repository and creates an isolated detached worktree.
+2. The CLI starts the project's existing preview command and prints a LAN address plus pairing code.
+3. The iPad opens the webpage, and Apple Pencil ink is composited onto a screenshot.
+4. The user types an instruction or optionally taps the microphone to transcribe
+   one. Voice input is wired into the composer and is sent as `inputMode: "voice"`;
+   the repository has not verified microphone permissions or speech recognition
+   on a physical iPad.
+5. The bridge sends the annotated JPEG and instruction text directly to the Codex SDK.
+6. Codex edits only the isolated worktree; the existing dev server/HMR can
+   update the preview already open on the iPad after completion. The client does
+   not issue a separate forced reload.
 
-- Native SwiftUI TouchCode Mac shell.
-- Mac-managed local bridge runtime and isolated demo workspaces.
-- Native iPadOS SwiftUI project with full-screen `WKWebView` preview.
-- PencilKit overlay that composites raw handwriting onto the webpage screenshot.
-- Visible DOM/React context collection without local gesture classification.
-- Provider boundary for multiple coding agents.
-- Multimodal Codex integration through the official `@openai/codex-sdk` package.
-- Vite HMR preview that reflects Codex edits back on iPad.
+The iPad optionally reads visible-element context from the preview's
+`window.touchCodeBridge.visibleContext()` hook; without that hook, the request
+contains an empty context list and the model uses the screenshot and repository
+contents. This flow does not accept video and does not use GPT Realtime. Diff,
+Keep, Undo, and merging changes back to the source repository are outside the
+CLI MVP.
 
-## Run locally
+## Run
 
-Install dependencies once, then build and launch the native Mac app:
+Install dependencies:
 
 ```bash
 pnpm install
-./script/build_and_run.sh
 ```
 
-Click **Start MVP Demo**, then open `apps/ipad/TouchCode.xcodeproj` in Xcode,
-run it on an iPad, and enter the LAN bridge address shown by the Mac app. See
-[`docs/mvp-run.md`](docs/mvp-run.md) for the complete manual flow.
+Start TouchCode against a clean Git web project. Everything after `--` is the
+project's normal preview command:
 
-## Architectural vocabulary
+```bash
+pnpm touchcode \
+  --project /absolute/path/to/web-project \
+  --cwd . \
+  --preview-port 5173 \
+  -- pnpm dev -- --host 0.0.0.0 --port 5173
+```
 
-- **TouchCode iPad:** live preview, raw Pencil annotation and text intent.
-- **TouchCode Mac:** user-facing bridge and control application.
-- **Bridge Runtime:** local transport and permission service managed by the Mac app.
-- **Coding Agent:** Codex, Claude Code or another external system that changes code.
+Then build/run `apps/ipad/TouchCode.xcodeproj` on an iPad or simulator, and
+enter the bridge address and six-digit code printed by the CLI. The checked-in
+build wrapper is intended for simulator compilation; simulator launch and
+local loopback tests do not prove a complete physical-iPad/LAN UI flow.
+
+See [`docs/mvp-run.md`](docs/mvp-run.md) for setup, safety behavior, and current limitations.

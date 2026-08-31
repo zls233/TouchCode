@@ -10,7 +10,8 @@
     "build:mac": "swift build --package-path apps/mac-app --build-system native",
     "check": "pnpm -r check",
     "test": "pnpm -r test",
-    "dev:bridge": "pnpm --filter @touchcode/mac-bridge-runtime dev"
+    "dev:bridge": "pnpm --filter @touchcode/mac-bridge-runtime dev",
+    "touchcode": "pnpm --filter @touchcode/mac-bridge-runtime cli"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

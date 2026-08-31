@@ -1,6 +1,7 @@
-import { cp, mkdir, readlink, symlink } from "node:fs/promises";
+import { appendFile, cp, mkdir, readFile, readlink, symlink } from "node:fs/promises";
 import { execFile } from "node:child_process";
-import { networkInterfaces } from "node:os";
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import { homedir, networkInterfaces } from "node:os";
 import path from "node:path";
 import net from "node:net";
 import { fileURLToPath } from "node:url";
@@ -14,17 +15,27 @@ const workspaceRoot = path.resolve(moduleDirectory, "../../..");
 const demoTemplatePath = path.join(workspaceRoot, "packages/demo-web");
 const sessionsRoot = path.join(workspaceRoot, ".touchcode/sessions");
 
-export type DemoSessionRecord = {
+type SessionStatus = "starting" | "running" | "stopped";
+
+export type WorkspaceSessionRecord = {
   sessionId: string;
-  projectId: string;
-  worktreePath: string;
   previewURL: string;
   bridgeURL: string;
-  port: number;
-  status: "starting" | "running" | "stopped";
+  pairingCode: string;
+  ipadConnected: boolean;
+  latestRunId: string | null;
+  errorMessage: string | null;
 };
 
-type ManagedSession = DemoSessionRecord & { process: ChildProcess };
+type ManagedSession = WorkspaceSessionRecord & {
+  projectId: string;
+  worktreePath: string;
+  port: number;
+  status: SessionStatus;
+  process: ChildProcess;
+  clientToken: string;
+  lastHeartbeatAt: number | null;
+};
 
 async function availablePort() {
   return await new Promise<number>((resolve, reject) => {
@@ -44,7 +55,7 @@ async function availablePort() {
 }
 
 async function waitForPreview(port: number, child: ChildProcess) {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
+  for (let attempt = 0; attempt < 300; attempt += 1) {
     if (child.exitCode !== null) throw new Error("The demo preview stopped before it became ready");
     const connected = await new Promise<boolean>((resolve) => {
       const socket = net.createConnection({ host: "127.0.0.1", port });
@@ -83,6 +94,7 @@ async function linkTemplateDependencies(sessionPath: string) {
 
 async function initializeGitRepository(sessionPath: string) {
   await execFileAsync("git", ["init", "--quiet"], { cwd: sessionPath });
+  await appendFile(path.join(sessionPath, ".git/info/exclude"), "\n.touchcode-inputs/\n");
   await execFileAsync("git", ["add", "."], { cwd: sessionPath });
   await execFileAsync("git", [
     "-c", "user.name=TouchCode",
@@ -91,12 +103,29 @@ async function initializeGitRepository(sessionPath: string) {
   ], { cwd: sessionPath });
 }
 
+function randomPairingCode() {
+  return String(Math.floor(100_000 + Math.random() * 900_000));
+}
+
+function tokensMatch(expected: string, actual: string) {
+  const expectedBytes = Buffer.from(expected);
+  const actualBytes = Buffer.from(actual);
+  return expectedBytes.length === actualBytes.length && timingSafeEqual(expectedBytes, actualBytes);
+}
+
 export class DemoSessionManager {
   readonly #sessions = new Map<string, ManagedSession>();
 
   constructor(
     private readonly grants: ProjectGrantStore,
     private readonly bridgeBaseURL: string,
+    private readonly inputsRoot = path.join(
+      homedir(),
+      "Library",
+      "Application Support",
+      "TouchCode",
+      "sessions",
+    ),
   ) {}
 
   async createOrReuse() {
@@ -107,6 +136,8 @@ export class DemoSessionManager {
   }
 
   async create() {
+    // Hydrate cloud-backed workspace metadata before Vite synchronously hashes it.
+    await readFile(path.join(workspaceRoot, "pnpm-lock.yaml"));
     await mkdir(sessionsRoot, { recursive: true });
     const sessionId = crypto.randomUUID();
     const sessionPath = path.join(sessionsRoot, sessionId);
@@ -138,12 +169,25 @@ export class DemoSessionManager {
       bridgeURL: this.bridgeBaseURL,
       port,
       status: "starting",
+      pairingCode: this.uniquePairingCode(),
+      ipadConnected: false,
+      latestRunId: null,
+      errorMessage: null,
+      clientToken: randomBytes(32).toString("hex"),
+      lastHeartbeatAt: null,
       process: child,
     };
     this.#sessions.set(sessionId, record);
 
     child.stdout?.on("data", () => { record.status = "running"; });
-    child.once("exit", () => { record.status = "stopped"; });
+    child.stderr?.on("data", (chunk: Buffer) => {
+      record.errorMessage = chunk.toString("utf8").trim().slice(-2_000) || record.errorMessage;
+    });
+    child.once("exit", (code, signal) => {
+      record.status = "stopped";
+      record.errorMessage = record.errorMessage
+        ?? `Preview exited (${signal ? `signal ${signal}` : `status ${code ?? "unknown"}`})`;
+    });
     try {
       await waitForPreview(port, child);
       record.status = "running";
@@ -155,21 +199,110 @@ export class DemoSessionManager {
     return this.publicRecord(record);
   }
 
+  async registerProjectSession(input: {
+    worktreePath: string;
+    previewURL: string;
+    port: number;
+    process: ChildProcess;
+  }) {
+    const grant = await this.grants.grant(input.worktreePath);
+    const sessionId = crypto.randomUUID();
+    const record: ManagedSession = {
+      sessionId,
+      projectId: grant.id,
+      worktreePath: grant.canonicalRoot,
+      previewURL: input.previewURL,
+      bridgeURL: this.bridgeBaseURL,
+      port: input.port,
+      status: "running",
+      pairingCode: this.uniquePairingCode(),
+      ipadConnected: false,
+      latestRunId: null,
+      errorMessage: null,
+      clientToken: randomBytes(32).toString("hex"),
+      lastHeartbeatAt: null,
+      process: input.process,
+    };
+    this.#sessions.set(sessionId, record);
+    input.process.once("exit", (code, signal) => {
+      record.status = "stopped";
+      record.errorMessage = `Preview exited (${signal ? `signal ${signal}` : `status ${code ?? "unknown"}`})`;
+    });
+    return this.publicRecord(record);
+  }
+
   get(sessionId: string) {
     const record = this.#sessions.get(sessionId);
-    if (!record) throw new Error("Unknown demo session");
+    if (!record) throw new Error("Unknown TouchCode session");
     return record;
   }
 
-  publicRecord(record: ManagedSession): DemoSessionRecord {
+  async inputDirectory(sessionId: string) {
+    this.get(sessionId);
+    const directory = path.join(this.inputsRoot, sessionId, "inputs");
+    await mkdir(directory, { recursive: true });
+    return directory;
+  }
+
+  pair(pairingCode: string) {
+    const record = Array.from(this.#sessions.values()).find(
+      (session) => session.pairingCode === pairingCode
+        && session.status === "running"
+        && session.process.exitCode === null,
+    );
+    if (!record) throw new Error("Pairing code is invalid or expired");
+    record.lastHeartbeatAt = Date.now();
+    record.ipadConnected = true;
+    return { ...this.publicRecord(record), clientToken: record.clientToken };
+  }
+
+  authorize(sessionId: string, token: string | undefined) {
+    const record = this.get(sessionId);
+    if (!token || !tokensMatch(record.clientToken, token)) {
+      throw new Error("Session token is invalid");
+    }
+    record.lastHeartbeatAt = Date.now();
+    record.ipadConnected = true;
+    return record;
+  }
+
+  heartbeat(sessionId: string, token: string | undefined) {
+    return this.publicRecord(this.authorize(sessionId, token));
+  }
+
+  setLatestRun(sessionId: string, runId: string) {
+    const record = this.get(sessionId);
+    record.latestRunId = runId;
+  }
+
+  private uniquePairingCode() {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const code = randomPairingCode();
+      if (!Array.from(this.#sessions.values()).some((session) => session.pairingCode === code)) {
+        return code;
+      }
+    }
+    throw new Error("Unable to allocate a pairing code");
+  }
+
+  stopAll() {
+    for (const session of this.#sessions.values()) {
+      if (session.process.exitCode === null) session.process.kill("SIGTERM");
+    }
+  }
+
+  publicRecord(record: ManagedSession): WorkspaceSessionRecord {
+    const ipadConnected = record.lastHeartbeatAt !== null
+      && Date.now() - record.lastHeartbeatAt < 15_000;
+    record.ipadConnected = ipadConnected;
     return {
       sessionId: record.sessionId,
-      projectId: record.projectId,
-      worktreePath: record.worktreePath,
       previewURL: record.previewURL,
       bridgeURL: record.bridgeURL,
-      port: record.port,
-      status: record.status,
+      pairingCode: record.pairingCode,
+      ipadConnected,
+      latestRunId: record.latestRunId,
+      errorMessage: record.errorMessage,
     };
   }
 }
