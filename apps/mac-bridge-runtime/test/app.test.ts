@@ -229,11 +229,13 @@ test("accepts an annotation-only V2 draft and persists every viewport capture", 
   } as unknown as DemoSessionManager;
   const app = await createBridgeApp({ codingAgents: agents, demoSessions: fakeSessions });
   const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(100)]).toString("base64");
-  const capture = { annotatedImageBase64: jpeg, viewport: { url: "http://127.0.0.1:5173", width: 1024, height: 768, scrollX: 0, scrollY: 0, zoomScale: 1, devicePixelRatio: 2 }, annotationBounds: { x: 1, y: 2, width: 3, height: 4 }, elements: [] };
+  const elements = [{ elementId: "heading-1", tag: "h1", text: "Hello", rect: { x: 10, y: 20, width: 100, height: 30 }, componentName: null, source: null }];
+  const capture = { annotatedImageBase64: jpeg, viewport: { url: "http://127.0.0.1:5173", width: 1024, height: 768, scrollX: 0, scrollY: 0, zoomScale: 1, devicePixelRatio: 2 }, annotationBounds: { x: 1, y: 2, width: 3, height: 4 }, elements };
   const response = await app.inject({ method: "POST", url: "/v1/sessions/session-v2/edits", payload: { type: "visual.run.v2", draftId: "draft-v2", inputMode: "annotation", captures: [capture, capture] } });
   assert.equal(response.statusCode, 202);
   for (let i = 0; i < 20 && !received; i++) await new Promise((r) => setTimeout(r, 10));
   assert.equal(received?.visualContext?.screenshotPaths?.length, 2);
+  assert.deepEqual(received?.visualContext?.elements, elements);
   assert.match(received?.intent.instruction ?? "", /If the intended change is unclear/);
   await app.close();
 });

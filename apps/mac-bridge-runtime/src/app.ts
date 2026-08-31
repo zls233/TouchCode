@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   acceptedVisualRunRequestSchema,
   pairSessionRequestSchema,
+  type AnnotationCapture,
   type AcceptedVisualRunRequest,
 } from "@touchcode/protocol";
 import { CodexSdkProvider } from "./coding-agents/codex-sdk-provider.js";
@@ -149,6 +150,7 @@ export async function createBridgeApp(options: BridgeAppOptions = {}) {
               screenshotPaths: screenshots.map((capture) => capture.path),
               viewportWidth: first.viewportWidth,
               viewportHeight: first.viewportHeight,
+              ...(first.elements ? { elements: first.elements } : {}),
             },
           }, provider);
           sessions.setLatestRun(session.sessionId, run.runId);
@@ -256,11 +258,17 @@ async function persistCaptures(
   sessionId: string,
   request: AcceptedVisualRunRequest,
 ) {
-  const rawCaptures = "captures" in request
+  const rawCaptures: Array<{
+    image: string;
+    viewportWidth: number;
+    viewportHeight: number;
+    elements?: AnnotationCapture["elements"];
+  }> = "captures" in request
     ? request.captures.map((capture) => ({
       image: capture.annotatedImageBase64,
       viewportWidth: capture.viewport.width,
       viewportHeight: capture.viewport.height,
+      elements: capture.elements,
     }))
     : [{
       image: request.annotatedImageBase64,
@@ -273,6 +281,11 @@ async function persistCaptures(
   return Promise.all(rawCaptures.map(async (capture) => {
     const pathName = path.join(inputDirectory, `${crypto.randomUUID()}.jpg`);
     await writeFile(pathName, decodeJPEG(capture.image), { flag: "wx" });
-    return { path: pathName, viewportWidth: capture.viewportWidth, viewportHeight: capture.viewportHeight };
+    return {
+      path: pathName,
+      viewportWidth: capture.viewportWidth,
+      viewportHeight: capture.viewportHeight,
+      ...(capture.elements ? { elements: capture.elements } : {}),
+    };
   }));
 }
