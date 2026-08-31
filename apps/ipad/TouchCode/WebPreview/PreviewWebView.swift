@@ -41,7 +41,11 @@ struct PreviewWebView: UIViewRepresentable {
             webView.load(URLRequest(url: url))
         }
         container.enabled = drawingEnabled
-        container.drawing = drawing
+        if container.drawing != drawing {
+            container.syncingDrawing = true
+            container.drawing = drawing
+            container.syncingDrawing = false
+        }
         container.onViewportChange = {
             onViewportChange()
             controller.didReceiveViewportChange()
@@ -91,7 +95,13 @@ final class TouchInputContainer: UIView {
     var onVoiceGesture: ((VoiceGestureEvent) -> Void)?
     var onViewportChange: (() -> Void)?
     var enabled = true { didSet { canvas.isUserInteractionEnabled = enabled } }
-    var drawing: PKDrawing { didSet { if canvas.drawing != drawing { canvas.drawing = drawing } } }
+    var syncingDrawing = false
+    var drawing: PKDrawing {
+        didSet {
+            guard !syncingDrawing, canvas.drawing != drawing else { return }
+            canvas.drawing = drawing
+        }
+    }
     private weak var originalScrollDelegate: UIScrollViewDelegate?
 
     init(webView: WKWebView, drawing: PKDrawing, enabled: Bool) {
@@ -140,27 +150,33 @@ final class TouchInputContainer: UIView {
 
     @objc private func handleVoiceGesture(_ gesture: TwoFingerVoiceGestureRecognizer) {
         guard let event = gesture.event else { return }
-        onVoiceGesture?(event)
+        let handler = onVoiceGesture
+        DispatchQueue.main.async { handler?(event) }
     }
 }
 
 extension TouchInputContainer: PKCanvasViewDelegate {
     func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
-        drawing = canvasView.drawing
-        onDrawingChanged?(canvasView.drawing)
+        guard !syncingDrawing else { return }
+        let d = canvasView.drawing
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.drawing != d else { return }
+            self.drawing = d
+            self.onDrawingChanged?(d)
+        }
     }
 
-
     func canvasViewDidEndUsingTool(_ canvasView: PKCanvasView) {
-        onStrokeEnded?()
+        let handler = onStrokeEnded
+        DispatchQueue.main.async { handler?() }
     }
 }
 
 extension TouchInputContainer: UIScrollViewDelegate {
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        // Forward to WKWebView's original delegate first to preserve its internal behavior.
         originalScrollDelegate?.scrollViewDidScroll?(scrollView)
-        onViewportChange?()
+        let handler = onViewportChange
+        DispatchQueue.main.async { handler?() }
     }
 }
 
