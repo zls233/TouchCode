@@ -1,483 +1,943 @@
-// !$*UTF8*$!
-{
-	archiveVersion = 1;
-	classes = {
-	};
-	objectVersion = 56;
-	objects = {
-
-/* Begin PBXBuildFile section */
-		A10000000000000000000001 /* TouchCodeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* TouchCodeApp.swift */; };
-		A10000000000000000000002 /* TouchCodeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* TouchCodeModels.swift */; };
-		A10000000000000000000003 /* TouchCodeAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* TouchCodeAPIClient.swift */; };
-		A10000000000000000000004 /* PreviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004 /* PreviewController.swift */; };
-		A10000000000000000000005 /* PreviewWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* PreviewWebView.swift */; };
-		A10000000000000000000006 /* PencilOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000006 /* PencilOverlay.swift */; };
-		A10000000000000000000007 /* ConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000007 /* ConnectionView.swift */; };
-		A10000000000000000000008 /* WorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000008 /* WorkspaceView.swift */; };
-		A10000000000000000000009 /* SpeechInputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000B /* SpeechInputController.swift */; };
-		A1000000000000000000000A /* AnnotationDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000C /* AnnotationDraft.swift */; };
-		A20000000000000000000001 /* AnnotationDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000001 /* AnnotationDraftTests.swift */; };
-		A20000000000000000000002 /* HMRAndGestureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000002 /* HMRAndGestureTests.swift */; };
-/* End PBXBuildFile section */
-
-/* Begin PBXFileReference section */
-		B10000000000000000000001 /* TouchCodeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchCodeApp.swift; sourceTree = "<group>"; };
-		B10000000000000000000002 /* TouchCodeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchCodeModels.swift; sourceTree = "<group>"; };
-		B10000000000000000000003 /* TouchCodeAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchCodeAPIClient.swift; sourceTree = "<group>"; };
-		B10000000000000000000004 /* PreviewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewController.swift; sourceTree = "<group>"; };
-		B10000000000000000000005 /* PreviewWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewWebView.swift; sourceTree = "<group>"; };
-		B10000000000000000000006 /* PencilOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PencilOverlay.swift; sourceTree = "<group>"; };
-		B10000000000000000000007 /* ConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionView.swift; sourceTree = "<group>"; };
-		B10000000000000000000008 /* WorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceView.swift; sourceTree = "<group>"; };
-		B10000000000000000000009 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		B1000000000000000000000A /* TouchCode.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TouchCode.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		B1000000000000000000000B /* SpeechInputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechInputController.swift; sourceTree = "<group>"; };
-		B1000000000000000000000C /* AnnotationDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationDraft.swift; sourceTree = "<group>"; };
-		B20000000000000000000001 /* AnnotationDraftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationDraftTests.swift; sourceTree = "<group>"; };
-		B20000000000000000000002 /* HMRAndGestureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HMRAndGestureTests.swift; sourceTree = "<group>"; };
-		B20000000000000000000003 /* TouchCodeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TouchCodeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-/* End PBXFileReference section */
-
-
-
-/* Begin PBXContainerItemProxy section */
-		E20000000000000000000001 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = E10000000000000000000002 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = E10000000000000000000001;
-			remoteInfo = TouchCode;
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXTargetDependency section */
-		E20000000000000000000002 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = E10000000000000000000001 /* TouchCode */;
-			targetProxy = E20000000000000000000001 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
-
-/* Begin PBXGroup section */
-		D10000000000000000000001 = {
-			isa = PBXGroup;
-			children = (
-				D20000000000000000000001 /* TouchCodeTests */,
-				D10000000000000000000002 /* TouchCode */,
-				D10000000000000000000009 /* Products */,
-			);
-			sourceTree = "<group>";
-		};
-		D10000000000000000000002 /* TouchCode */ = {
-			isa = PBXGroup;
-			children = (
-				B10000000000000000000001 /* TouchCodeApp.swift */,
-				D10000000000000000000003 /* Models */,
-				D10000000000000000000004 /* Networking */,
-				D10000000000000000000005 /* WebPreview */,
-				D10000000000000000000006 /* Pencil */,
-				D10000000000000000000007 /* Views */,
-				B10000000000000000000009 /* Info.plist */,
-			);
-			path = TouchCode;
-			sourceTree = "<group>";
-		};
-		D10000000000000000000003 /* Models */ = {
-			isa = PBXGroup;
-			children = (
-				B10000000000000000000002 /* TouchCodeModels.swift */,
-				B1000000000000000000000B /* SpeechInputController.swift */,
-				B1000000000000000000000C /* AnnotationDraft.swift */,
-			);
-			path = Models;
-			sourceTree = "<group>";
-		};
-		D10000000000000000000004 /* Networking */ = {
-			isa = PBXGroup;
-			children = (
-				B10000000000000000000003 /* TouchCodeAPIClient.swift */,
-			);
-			path = Networking;
-			sourceTree = "<group>";
-		};
-		D10000000000000000000005 /* WebPreview */ = {
-			isa = PBXGroup;
-			children = (
-				B10000000000000000000004 /* PreviewController.swift */,
-				B10000000000000000000005 /* PreviewWebView.swift */,
-			);
-			path = WebPreview;
-			sourceTree = "<group>";
-		};
-		D10000000000000000000006 /* Pencil */ = {
-			isa = PBXGroup;
-			children = (
-				B10000000000000000000006 /* PencilOverlay.swift */,
-			);
-			path = Pencil;
-			sourceTree = "<group>";
-		};
-		D10000000000000000000007 /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				B10000000000000000000007 /* ConnectionView.swift */,
-				B10000000000000000000008 /* WorkspaceView.swift */,
-			);
-			path = Views;
-			sourceTree = "<group>";
-		};
-		D10000000000000000000009 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				B1000000000000000000000A /* TouchCode.app */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		D20000000000000000000001 /* TouchCodeTests */ = {
-			isa = PBXGroup;
-			children = (
-				B20000000000000000000001 /* AnnotationDraftTests.swift */,
-				B20000000000000000000002 /* HMRAndGestureTests.swift */,
-			);
-			path = TouchCodeTests;
-			sourceTree = "<group>";
-		};
-/* End PBXGroup section */
-
-/* Begin PBXNativeTarget section */
-		E10000000000000000000001 /* TouchCode */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = F10000000000000000000002 /* Build configuration list for PBXNativeTarget "TouchCode" */;
-			buildPhases = (
-				C10000000000000000000002 /* Sources */,
-				C10000000000000000000001 /* Frameworks */,
-				C10000000000000000000003 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = TouchCode;
-			productName = TouchCode;
-			productReference = B1000000000000000000000A /* TouchCode.app */;
-			productType = "com.apple.product-type.application";
-		};
-		E20000000000000000000003 /* TouchCodeTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = F20000000000000000000002 /* Build configuration list for PBXNativeTarget "TouchCodeTests" */;
-			buildPhases = (
-				C20000000000000000000001 /* Sources */,
-				C20000000000000000000002 /* Frameworks */,
-				C20000000000000000000003 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				E20000000000000000000002 /* PBXTargetDependency */,
-			);
-			name = TouchCodeTests;
-			productName = TouchCodeTests;
-			productReference = B20000000000000000000003 /* TouchCodeTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
-/* End PBXNativeTarget section */
-
-/* Begin PBXProject section */
-		E10000000000000000000002 /* Project object */ = {
-			isa = PBXProject;
-			attributes = {
-				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1600;
-				LastUpgradeCheck = 2700;
-				TargetAttributes = {
-					E20000000000000000000003 = {
-						CreatedOnToolsVersion = 16.0;
-						TestTargetID = E10000000000000000000001;
-					},
-					E10000000000000000000001 = {
-						CreatedOnToolsVersion = 16.0;
-					};
-				};
-			};
-			buildConfigurationList = F10000000000000000000001 /* Build configuration list for PBXProject "TouchCode" */;
-			compatibilityVersion = "Xcode 14.0";
-			developmentRegion = en;
-			hasScannedForEncodings = 0;
-			knownRegions = (
-				en,
-				Base,
-			);
-			mainGroup = D10000000000000000000001;
-			productRefGroup = D10000000000000000000009 /* Products */;
-			projectDirPath = "";
-			projectRoot = "";
-			targets = (
-				E10000000000000000000001 /* TouchCode */,
-				E20000000000000000000003 /* TouchCodeTests */,
-			);
-		};
-/* End PBXProject section */
-
-
-
-
-
-
-
-
-
-
-
-/* Begin PBXSourcesBuildPhase section */
-C10000000000000000000002 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				A10000000000000000000001 /* TouchCodeApp.swift in Sources */,
-				A10000000000000000000002 /* TouchCodeModels.swift in Sources */,
-				A10000000000000000000003 /* TouchCodeAPIClient.swift in Sources */,
-				A10000000000000000000004 /* PreviewController.swift in Sources */,
-				A10000000000000000000005 /* PreviewWebView.swift in Sources */,
-				A10000000000000000000006 /* PencilOverlay.swift in Sources */,
-				A10000000000000000000007 /* ConnectionView.swift in Sources */,
-				A10000000000000000000008 /* WorkspaceView.swift in Sources */,
-				A10000000000000000000009 /* SpeechInputController.swift in Sources */,
-				A1000000000000000000000A /* AnnotationDraft.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-C20000000000000000000001 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				A20000000000000000000001 /* AnnotationDraftTests.swift in Sources */,
-				A20000000000000000000002 /* HMRAndGestureTests.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXSourcesBuildPhase section */
-
-/* Begin PBXFrameworksBuildPhase section */
-C10000000000000000000001 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-C20000000000000000000002 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXFrameworksBuildPhase section */
-
-/* Begin PBXResourcesBuildPhase section */
-C10000000000000000000003 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-C20000000000000000000003 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXResourcesBuildPhase section */
-
-/* Begin XCBuildConfiguration section */
-		F10000000000000000000003 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				DEVELOPMENT_TEAM = 3BYWF9Y4HC;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
-		};
-		F10000000000000000000004 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				DEVELOPMENT_TEAM = 3BYWF9Y4HC;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Release;
-		};
-		F10000000000000000000005 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = TouchCode/Info.plist;
-				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.touchcode.ipad;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				TARGETED_DEVICE_FAMILY = 2;
-			};
-			name = Debug;
-		};
-		F10000000000000000000006 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = TouchCode/Info.plist;
-				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.touchcode.ipad;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				TARGETED_DEVICE_FAMILY = 2;
-			};
-			name = Release;
-		};
-		F20000000000000000000003 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.touchcode.ipad.tests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TouchCode.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TouchCode";
-			};
-			name = Debug;
-		};
-		F20000000000000000000004 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.touchcode.ipad.tests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TouchCode.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TouchCode";
-			};
-			name = Release;
-		};
-/* End XCBuildConfiguration section */
-
-/* Begin XCConfigurationList section */
-		F10000000000000000000001 /* Build configuration list for PBXProject "TouchCode" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				F10000000000000000000003 /* Debug */,
-				F10000000000000000000004 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		F10000000000000000000002 /* Build configuration list for PBXNativeTarget "TouchCode" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				F10000000000000000000005 /* Debug */,
-				F10000000000000000000006 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		F20000000000000000000002 /* Build configuration list for PBXNativeTarget "TouchCodeTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				F20000000000000000000003 /* Debug */,
-				F20000000000000000000004 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-/* End XCConfigurationList section */
-	};
-	rootObject = E10000000000000000000002 /* Project object */;
-}
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>archiveVersion</key>
+	<string>1</string>
+	<key>classes</key>
+	<dict/>
+	<key>objectVersion</key>
+	<string>56</string>
+	<key>objects</key>
+	<dict>
+		<key>A10000000000000000000001</key>
+		<dict>
+			<key>fileRef</key>
+			<string>B10000000000000000000001</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>A10000000000000000000002</key>
+		<dict>
+			<key>fileRef</key>
+			<string>B10000000000000000000002</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>A10000000000000000000003</key>
+		<dict>
+			<key>fileRef</key>
+			<string>B10000000000000000000003</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>A10000000000000000000004</key>
+		<dict>
+			<key>fileRef</key>
+			<string>B10000000000000000000004</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>A10000000000000000000005</key>
+		<dict>
+			<key>fileRef</key>
+			<string>B10000000000000000000005</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>A10000000000000000000006</key>
+		<dict>
+			<key>fileRef</key>
+			<string>B10000000000000000000006</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>A10000000000000000000007</key>
+		<dict>
+			<key>fileRef</key>
+			<string>B10000000000000000000007</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>A10000000000000000000008</key>
+		<dict>
+			<key>fileRef</key>
+			<string>B10000000000000000000008</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>B10000000000000000000001</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>TouchCodeApp.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B10000000000000000000002</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>TouchCodeModels.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B10000000000000000000003</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>TouchCodeAPIClient.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B10000000000000000000004</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>PreviewController.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B10000000000000000000005</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>PreviewWebView.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B10000000000000000000006</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>PencilOverlay.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B10000000000000000000007</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ConnectionView.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B10000000000000000000008</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WorkspaceView.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B10000000000000000000009</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>text.plist.xml</string>
+			<key>path</key>
+			<string>Info.plist</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B1000000000000000000000A</key>
+		<dict>
+			<key>explicitFileType</key>
+			<string>wrapper.application</string>
+			<key>includeInIndex</key>
+			<string>0</string>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>path</key>
+			<string>TouchCode.app</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+		</dict>
+		<key>C10000000000000000000001</key>
+		<dict>
+			<key>buildActionMask</key>
+			<string>2147483647</string>
+			<key>files</key>
+			<array/>
+			<key>isa</key>
+			<string>PBXFrameworksBuildPhase</string>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<string>0</string>
+		</dict>
+		<key>C10000000000000000000002</key>
+		<dict>
+			<key>buildActionMask</key>
+			<string>2147483647</string>
+			<key>files</key>
+			<array>
+				<string>A10000000000000000000001</string>
+				<string>A10000000000000000000002</string>
+				<string>A10000000000000000000003</string>
+				<string>A10000000000000000000004</string>
+				<string>A10000000000000000000005</string>
+				<string>A10000000000000000000006</string>
+				<string>A10000000000000000000007</string>
+				<string>A10000000000000000000008</string>
+				<string>A10000000000000000000009</string>
+				<string>A1000000000000000000000A</string>
+			</array>
+			<key>isa</key>
+			<string>PBXSourcesBuildPhase</string>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<string>0</string>
+		</dict>
+		<key>C10000000000000000000003</key>
+		<dict>
+			<key>buildActionMask</key>
+			<string>2147483647</string>
+			<key>files</key>
+			<array/>
+			<key>isa</key>
+			<string>PBXResourcesBuildPhase</string>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<string>0</string>
+		</dict>
+		<key>D10000000000000000000001</key>
+		<dict>
+			<key>children</key>
+			<array>
+				<string>D20000000000000000000001</string>
+				<string>D10000000000000000000002</string>
+				<string>D10000000000000000000009</string>
+			</array>
+			<key>isa</key>
+			<string>PBXGroup</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>D10000000000000000000002</key>
+		<dict>
+			<key>children</key>
+			<array>
+				<string>B10000000000000000000001</string>
+				<string>D10000000000000000000003</string>
+				<string>D10000000000000000000004</string>
+				<string>D10000000000000000000005</string>
+				<string>D10000000000000000000006</string>
+				<string>D10000000000000000000007</string>
+				<string>B10000000000000000000009</string>
+			</array>
+			<key>isa</key>
+			<string>PBXGroup</string>
+			<key>path</key>
+			<string>TouchCode</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>D10000000000000000000003</key>
+		<dict>
+			<key>children</key>
+			<array>
+				<string>B10000000000000000000002</string>
+				<string>B1000000000000000000000B</string>
+				<string>B1000000000000000000000C</string>
+			</array>
+			<key>isa</key>
+			<string>PBXGroup</string>
+			<key>path</key>
+			<string>Models</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>D10000000000000000000004</key>
+		<dict>
+			<key>children</key>
+			<array>
+				<string>B10000000000000000000003</string>
+			</array>
+			<key>isa</key>
+			<string>PBXGroup</string>
+			<key>path</key>
+			<string>Networking</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>D10000000000000000000005</key>
+		<dict>
+			<key>children</key>
+			<array>
+				<string>B10000000000000000000004</string>
+				<string>B10000000000000000000005</string>
+			</array>
+			<key>isa</key>
+			<string>PBXGroup</string>
+			<key>path</key>
+			<string>WebPreview</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>D10000000000000000000006</key>
+		<dict>
+			<key>children</key>
+			<array>
+				<string>B10000000000000000000006</string>
+			</array>
+			<key>isa</key>
+			<string>PBXGroup</string>
+			<key>path</key>
+			<string>Pencil</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>D10000000000000000000007</key>
+		<dict>
+			<key>children</key>
+			<array>
+				<string>B10000000000000000000007</string>
+				<string>B10000000000000000000008</string>
+			</array>
+			<key>isa</key>
+			<string>PBXGroup</string>
+			<key>path</key>
+			<string>Views</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>D10000000000000000000009</key>
+		<dict>
+			<key>children</key>
+			<array>
+				<string>B1000000000000000000000A</string>
+			</array>
+			<key>isa</key>
+			<string>PBXGroup</string>
+			<key>name</key>
+			<string>Products</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>E10000000000000000000001</key>
+		<dict>
+			<key>buildConfigurationList</key>
+			<string>F10000000000000000000002</string>
+			<key>buildPhases</key>
+			<array>
+				<string>C10000000000000000000002</string>
+				<string>C10000000000000000000001</string>
+				<string>C10000000000000000000003</string>
+			</array>
+			<key>buildRules</key>
+			<array/>
+			<key>dependencies</key>
+			<array/>
+			<key>isa</key>
+			<string>PBXNativeTarget</string>
+			<key>name</key>
+			<string>TouchCode</string>
+			<key>productName</key>
+			<string>TouchCode</string>
+			<key>productReference</key>
+			<string>B1000000000000000000000A</string>
+			<key>productType</key>
+			<string>com.apple.product-type.application</string>
+		</dict>
+		<key>E10000000000000000000002</key>
+		<dict>
+			<key>attributes</key>
+			<dict>
+				<key>BuildIndependentTargetsInParallel</key>
+				<string>1</string>
+				<key>LastSwiftUpdateCheck</key>
+				<string>1600</string>
+				<key>LastUpgradeCheck</key>
+				<string>2700</string>
+				<key>TargetAttributes</key>
+				<dict>
+					<key>E10000000000000000000001</key>
+					<dict>
+						<key>CreatedOnToolsVersion</key>
+						<string>16.0</string>
+					</dict>
+					<key>E20000000000000000000003</key>
+					<dict>
+						<key>CreatedOnToolsVersion</key>
+						<string>16.0</string>
+						<key>TestTargetID</key>
+						<string>E10000000000000000000001</string>
+					</dict>
+				</dict>
+			</dict>
+			<key>buildConfigurationList</key>
+			<string>F10000000000000000000001</string>
+			<key>compatibilityVersion</key>
+			<string>Xcode 14.0</string>
+			<key>developmentRegion</key>
+			<string>en</string>
+			<key>hasScannedForEncodings</key>
+			<string>0</string>
+			<key>isa</key>
+			<string>PBXProject</string>
+			<key>knownRegions</key>
+			<array>
+				<string>en</string>
+				<string>Base</string>
+			</array>
+			<key>mainGroup</key>
+			<string>D10000000000000000000001</string>
+			<key>productRefGroup</key>
+			<string>D10000000000000000000009</string>
+			<key>projectDirPath</key>
+			<string></string>
+			<key>projectRoot</key>
+			<string></string>
+			<key>targets</key>
+			<array>
+				<string>E10000000000000000000001</string>
+				<string>E20000000000000000000003</string>
+			</array>
+		</dict>
+		<key>F10000000000000000000001</key>
+		<dict>
+			<key>buildConfigurations</key>
+			<array>
+				<string>F10000000000000000000003</string>
+				<string>F10000000000000000000004</string>
+			</array>
+			<key>defaultConfigurationIsVisible</key>
+			<string>0</string>
+			<key>defaultConfigurationName</key>
+			<string>Release</string>
+			<key>isa</key>
+			<string>XCConfigurationList</string>
+		</dict>
+		<key>F10000000000000000000002</key>
+		<dict>
+			<key>buildConfigurations</key>
+			<array>
+				<string>F10000000000000000000005</string>
+				<string>F10000000000000000000006</string>
+			</array>
+			<key>defaultConfigurationIsVisible</key>
+			<string>0</string>
+			<key>defaultConfigurationName</key>
+			<string>Release</string>
+			<key>isa</key>
+			<string>XCConfigurationList</string>
+		</dict>
+		<key>F10000000000000000000003</key>
+		<dict>
+			<key>buildSettings</key>
+			<dict>
+				<key>ALWAYS_SEARCH_USER_PATHS</key>
+				<string>NO</string>
+				<key>CLANG_ENABLE_MODULES</key>
+				<string>YES</string>
+				<key>CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING</key>
+				<string>YES</string>
+				<key>CLANG_WARN_BOOL_CONVERSION</key>
+				<string>YES</string>
+				<key>CLANG_WARN_COMMA</key>
+				<string>YES</string>
+				<key>CLANG_WARN_CONSTANT_CONVERSION</key>
+				<string>YES</string>
+				<key>CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS</key>
+				<string>YES</string>
+				<key>CLANG_WARN_EMPTY_BODY</key>
+				<string>YES</string>
+				<key>CLANG_WARN_ENUM_CONVERSION</key>
+				<string>YES</string>
+				<key>CLANG_WARN_INFINITE_RECURSION</key>
+				<string>YES</string>
+				<key>CLANG_WARN_INT_CONVERSION</key>
+				<string>YES</string>
+				<key>CLANG_WARN_NON_LITERAL_NULL_CONVERSION</key>
+				<string>YES</string>
+				<key>CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF</key>
+				<string>YES</string>
+				<key>CLANG_WARN_OBJC_LITERAL_CONVERSION</key>
+				<string>YES</string>
+				<key>CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER</key>
+				<string>YES</string>
+				<key>CLANG_WARN_RANGE_LOOP_ANALYSIS</key>
+				<string>YES</string>
+				<key>CLANG_WARN_STRICT_PROTOTYPES</key>
+				<string>YES</string>
+				<key>CLANG_WARN_SUSPICIOUS_MOVE</key>
+				<string>YES</string>
+				<key>CLANG_WARN_UNREACHABLE_CODE</key>
+				<string>YES</string>
+				<key>CLANG_WARN__DUPLICATE_METHOD_MATCH</key>
+				<string>YES</string>
+				<key>DEVELOPMENT_TEAM</key>
+				<string>3BYWF9Y4HC</string>
+				<key>ENABLE_STRICT_OBJC_MSGSEND</key>
+				<string>YES</string>
+				<key>ENABLE_TESTABILITY</key>
+				<string>YES</string>
+				<key>ENABLE_USER_SCRIPT_SANDBOXING</key>
+				<string>YES</string>
+				<key>GCC_NO_COMMON_BLOCKS</key>
+				<string>YES</string>
+				<key>GCC_WARN_64_TO_32_BIT_CONVERSION</key>
+				<string>YES</string>
+				<key>GCC_WARN_ABOUT_RETURN_TYPE</key>
+				<string>YES</string>
+				<key>GCC_WARN_UNDECLARED_SELECTOR</key>
+				<string>YES</string>
+				<key>GCC_WARN_UNINITIALIZED_AUTOS</key>
+				<string>YES</string>
+				<key>GCC_WARN_UNUSED_FUNCTION</key>
+				<string>YES</string>
+				<key>GCC_WARN_UNUSED_VARIABLE</key>
+				<string>YES</string>
+				<key>IPHONEOS_DEPLOYMENT_TARGET</key>
+				<string>26.0</string>
+				<key>ONLY_ACTIVE_ARCH</key>
+				<string>YES</string>
+				<key>SDKROOT</key>
+				<string>iphoneos</string>
+				<key>STRING_CATALOG_GENERATE_SYMBOLS</key>
+				<string>YES</string>
+				<key>SWIFT_VERSION</key>
+				<string>5.0</string>
+			</dict>
+			<key>isa</key>
+			<string>XCBuildConfiguration</string>
+			<key>name</key>
+			<string>Debug</string>
+		</dict>
+		<key>F10000000000000000000004</key>
+		<dict>
+			<key>buildSettings</key>
+			<dict>
+				<key>ALWAYS_SEARCH_USER_PATHS</key>
+				<string>NO</string>
+				<key>CLANG_ENABLE_MODULES</key>
+				<string>YES</string>
+				<key>CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING</key>
+				<string>YES</string>
+				<key>CLANG_WARN_BOOL_CONVERSION</key>
+				<string>YES</string>
+				<key>CLANG_WARN_COMMA</key>
+				<string>YES</string>
+				<key>CLANG_WARN_CONSTANT_CONVERSION</key>
+				<string>YES</string>
+				<key>CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS</key>
+				<string>YES</string>
+				<key>CLANG_WARN_EMPTY_BODY</key>
+				<string>YES</string>
+				<key>CLANG_WARN_ENUM_CONVERSION</key>
+				<string>YES</string>
+				<key>CLANG_WARN_INFINITE_RECURSION</key>
+				<string>YES</string>
+				<key>CLANG_WARN_INT_CONVERSION</key>
+				<string>YES</string>
+				<key>CLANG_WARN_NON_LITERAL_NULL_CONVERSION</key>
+				<string>YES</string>
+				<key>CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF</key>
+				<string>YES</string>
+				<key>CLANG_WARN_OBJC_LITERAL_CONVERSION</key>
+				<string>YES</string>
+				<key>CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER</key>
+				<string>YES</string>
+				<key>CLANG_WARN_RANGE_LOOP_ANALYSIS</key>
+				<string>YES</string>
+				<key>CLANG_WARN_STRICT_PROTOTYPES</key>
+				<string>YES</string>
+				<key>CLANG_WARN_SUSPICIOUS_MOVE</key>
+				<string>YES</string>
+				<key>CLANG_WARN_UNREACHABLE_CODE</key>
+				<string>YES</string>
+				<key>CLANG_WARN__DUPLICATE_METHOD_MATCH</key>
+				<string>YES</string>
+				<key>DEVELOPMENT_TEAM</key>
+				<string>3BYWF9Y4HC</string>
+				<key>ENABLE_STRICT_OBJC_MSGSEND</key>
+				<string>YES</string>
+				<key>ENABLE_USER_SCRIPT_SANDBOXING</key>
+				<string>YES</string>
+				<key>GCC_NO_COMMON_BLOCKS</key>
+				<string>YES</string>
+				<key>GCC_WARN_64_TO_32_BIT_CONVERSION</key>
+				<string>YES</string>
+				<key>GCC_WARN_ABOUT_RETURN_TYPE</key>
+				<string>YES</string>
+				<key>GCC_WARN_UNDECLARED_SELECTOR</key>
+				<string>YES</string>
+				<key>GCC_WARN_UNINITIALIZED_AUTOS</key>
+				<string>YES</string>
+				<key>GCC_WARN_UNUSED_FUNCTION</key>
+				<string>YES</string>
+				<key>GCC_WARN_UNUSED_VARIABLE</key>
+				<string>YES</string>
+				<key>IPHONEOS_DEPLOYMENT_TARGET</key>
+				<string>26.0</string>
+				<key>SDKROOT</key>
+				<string>iphoneos</string>
+				<key>STRING_CATALOG_GENERATE_SYMBOLS</key>
+				<string>YES</string>
+				<key>SWIFT_COMPILATION_MODE</key>
+				<string>wholemodule</string>
+				<key>SWIFT_VERSION</key>
+				<string>5.0</string>
+			</dict>
+			<key>isa</key>
+			<string>XCBuildConfiguration</string>
+			<key>name</key>
+			<string>Release</string>
+		</dict>
+		<key>F10000000000000000000005</key>
+		<dict>
+			<key>buildSettings</key>
+			<dict>
+				<key>CLANG_ENABLE_OBJC_WEAK</key>
+				<string>YES</string>
+				<key>CODE_SIGN_STYLE</key>
+				<string>Automatic</string>
+				<key>CURRENT_PROJECT_VERSION</key>
+				<string>1</string>
+				<key>GENERATE_INFOPLIST_FILE</key>
+				<string>NO</string>
+				<key>INFOPLIST_FILE</key>
+				<string>TouchCode/Info.plist</string>
+				<key>MARKETING_VERSION</key>
+				<string>0.1</string>
+				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
+				<string>com.touchcode.ipad</string>
+				<key>PRODUCT_NAME</key>
+				<string>$(TARGET_NAME)</string>
+				<key>SUPPORTED_PLATFORMS</key>
+				<string>iphoneos iphonesimulator</string>
+				<key>SUPPORTS_MACCATALYST</key>
+				<string>NO</string>
+				<key>SWIFT_EMIT_LOC_STRINGS</key>
+				<string>YES</string>
+				<key>TARGETED_DEVICE_FAMILY</key>
+				<string>2</string>
+			</dict>
+			<key>isa</key>
+			<string>XCBuildConfiguration</string>
+			<key>name</key>
+			<string>Debug</string>
+		</dict>
+		<key>F10000000000000000000006</key>
+		<dict>
+			<key>buildSettings</key>
+			<dict>
+				<key>CLANG_ENABLE_OBJC_WEAK</key>
+				<string>YES</string>
+				<key>CODE_SIGN_STYLE</key>
+				<string>Automatic</string>
+				<key>CURRENT_PROJECT_VERSION</key>
+				<string>1</string>
+				<key>GENERATE_INFOPLIST_FILE</key>
+				<string>NO</string>
+				<key>INFOPLIST_FILE</key>
+				<string>TouchCode/Info.plist</string>
+				<key>MARKETING_VERSION</key>
+				<string>0.1</string>
+				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
+				<string>com.touchcode.ipad</string>
+				<key>PRODUCT_NAME</key>
+				<string>$(TARGET_NAME)</string>
+				<key>SUPPORTED_PLATFORMS</key>
+				<string>iphoneos iphonesimulator</string>
+				<key>SUPPORTS_MACCATALYST</key>
+				<string>NO</string>
+				<key>SWIFT_EMIT_LOC_STRINGS</key>
+				<string>YES</string>
+				<key>TARGETED_DEVICE_FAMILY</key>
+				<string>2</string>
+			</dict>
+			<key>isa</key>
+			<string>XCBuildConfiguration</string>
+			<key>name</key>
+			<string>Release</string>
+		</dict>
+		<key>A10000000000000000000009</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>B1000000000000000000000B</string>
+		</dict>
+		<key>A1000000000000000000000A</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>B1000000000000000000000C</string>
+		</dict>
+		<key>A20000000000000000000001</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>B20000000000000000000001</string>
+		</dict>
+		<key>A20000000000000000000002</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>B20000000000000000000002</string>
+		</dict>
+		<key>B1000000000000000000000B</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>SpeechInputController.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B1000000000000000000000C</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>AnnotationDraft.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B20000000000000000000001</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>AnnotationDraftTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B20000000000000000000002</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>HMRAndGestureTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B20000000000000000000003</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>explicitFileType</key>
+			<string>wrapper.cfbundle</string>
+			<key>includeInIndex</key>
+			<integer>0</integer>
+			<key>path</key>
+			<string>TouchCodeTests.xctest</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+		</dict>
+		<key>D20000000000000000000001</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXGroup</string>
+			<key>children</key>
+			<array>
+				<string>B20000000000000000000001</string>
+				<string>B20000000000000000000002</string>
+			</array>
+			<key>path</key>
+			<string>TouchCodeTests</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>E20000000000000000000001</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXContainerItemProxy</string>
+			<key>containerPortal</key>
+			<string>E10000000000000000000002</string>
+			<key>proxyType</key>
+			<integer>1</integer>
+			<key>remoteGlobalIDString</key>
+			<string>E10000000000000000000001</string>
+			<key>remoteInfo</key>
+			<string>TouchCode</string>
+		</dict>
+		<key>E20000000000000000000002</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXTargetDependency</string>
+			<key>target</key>
+			<string>E10000000000000000000001</string>
+			<key>targetProxy</key>
+			<string>E20000000000000000000001</string>
+		</dict>
+		<key>E20000000000000000000003</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXNativeTarget</string>
+			<key>buildConfigurationList</key>
+			<string>F20000000000000000000002</string>
+			<key>buildPhases</key>
+			<array>
+				<string>C20000000000000000000001</string>
+				<string>C20000000000000000000002</string>
+				<string>C20000000000000000000003</string>
+			</array>
+			<key>buildRules</key>
+			<array/>
+			<key>dependencies</key>
+			<array>
+				<string>E20000000000000000000002</string>
+			</array>
+			<key>name</key>
+			<string>TouchCodeTests</string>
+			<key>productName</key>
+			<string>TouchCodeTests</string>
+			<key>productReference</key>
+			<string>B20000000000000000000003</string>
+			<key>productType</key>
+			<string>com.apple.product-type.bundle.unit-test</string>
+		</dict>
+		<key>C20000000000000000000001</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXSourcesBuildPhase</string>
+			<key>buildActionMask</key>
+			<integer>2147483647</integer>
+			<key>files</key>
+			<array>
+				<string>A20000000000000000000001</string>
+				<string>A20000000000000000000002</string>
+			</array>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<integer>0</integer>
+		</dict>
+		<key>C20000000000000000000002</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFrameworksBuildPhase</string>
+			<key>buildActionMask</key>
+			<integer>2147483647</integer>
+			<key>files</key>
+			<array/>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<integer>0</integer>
+		</dict>
+		<key>C20000000000000000000003</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXResourcesBuildPhase</string>
+			<key>buildActionMask</key>
+			<integer>2147483647</integer>
+			<key>files</key>
+			<array/>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<integer>0</integer>
+		</dict>
+		<key>F20000000000000000000003</key>
+		<dict>
+			<key>isa</key>
+			<string>XCBuildConfiguration</string>
+			<key>buildSettings</key>
+			<dict>
+				<key>BUNDLE_LOADER</key>
+				<string>$(TEST_HOST)</string>
+				<key>CODE_SIGN_STYLE</key>
+				<string>Automatic</string>
+				<key>CURRENT_PROJECT_VERSION</key>
+				<string>1</string>
+				<key>GENERATE_INFOPLIST_FILE</key>
+				<string>YES</string>
+				<key>IPHONEOS_DEPLOYMENT_TARGET</key>
+				<string>26.0</string>
+				<key>MARKETING_VERSION</key>
+				<string>0.1</string>
+				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
+				<string>com.touchcode.ipad.tests</string>
+				<key>PRODUCT_NAME</key>
+				<string>$(TARGET_NAME)</string>
+				<key>SWIFT_EMIT_LOC_STRINGS</key>
+				<string>NO</string>
+				<key>SWIFT_VERSION</key>
+				<string>5.0</string>
+				<key>TEST_HOST</key>
+				<string>$(BUILT_PRODUCTS_DIR)/TouchCode.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TouchCode</string>
+			</dict>
+			<key>name</key>
+			<string>Debug</string>
+		</dict>
+		<key>F20000000000000000000004</key>
+		<dict>
+			<key>isa</key>
+			<string>XCBuildConfiguration</string>
+			<key>buildSettings</key>
+			<dict>
+				<key>BUNDLE_LOADER</key>
+				<string>$(TEST_HOST)</string>
+				<key>CODE_SIGN_STYLE</key>
+				<string>Automatic</string>
+				<key>CURRENT_PROJECT_VERSION</key>
+				<string>1</string>
+				<key>GENERATE_INFOPLIST_FILE</key>
+				<string>YES</string>
+				<key>IPHONEOS_DEPLOYMENT_TARGET</key>
+				<string>26.0</string>
+				<key>MARKETING_VERSION</key>
+				<string>0.1</string>
+				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
+				<string>com.touchcode.ipad.tests</string>
+				<key>PRODUCT_NAME</key>
+				<string>$(TARGET_NAME)</string>
+				<key>SWIFT_EMIT_LOC_STRINGS</key>
+				<string>NO</string>
+				<key>SWIFT_VERSION</key>
+				<string>5.0</string>
+				<key>TEST_HOST</key>
+				<string>$(BUILT_PRODUCTS_DIR)/TouchCode.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TouchCode</string>
+			</dict>
+			<key>name</key>
+			<string>Release</string>
+		</dict>
+		<key>F20000000000000000000002</key>
+		<dict>
+			<key>isa</key>
+			<string>XCConfigurationList</string>
+			<key>buildConfigurations</key>
+			<array>
+				<string>F20000000000000000000003</string>
+				<string>F20000000000000000000004</string>
+			</array>
+			<key>defaultConfigurationIsVisible</key>
+			<integer>0</integer>
+			<key>defaultConfigurationName</key>
+			<string>Release</string>
+		</dict>
+	</dict>
+	<key>rootObject</key>
+	<string>E10000000000000000000002</string>
+</dict>
+</plist>
