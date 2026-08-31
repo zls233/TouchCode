@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct ConnectionView: View {
-    @AppStorage("bridgeAddress") private var bridgeAddress = "http://127.0.0.1:4317"
+    @State private var bridgeAddress: String = {
+        UserDefaults.standard.string(forKey: "bridgeAddress") ?? "http://127.0.0.1:4317"
+    }()
     @State private var pairingCode = ""
     @State private var session: PairedWorkspaceSession?
     @State private var isConnecting = false
@@ -35,7 +37,8 @@ struct ConnectionView: View {
                         .textFieldStyle(.roundedBorder)
                         .frame(maxWidth: 240)
                         .onChange(of: pairingCode) { _, newValue in
-                            pairingCode = String(newValue.filter(\.isNumber).prefix(6))
+                            let filtered = String(newValue.filter(\.isNumber).prefix(6))
+                            if pairingCode != filtered { pairingCode = filtered }
                         }
                     Button(isConnecting ? "Pairing…" : "Connect") {
                         Task { await connect() }
@@ -57,6 +60,7 @@ struct ConnectionView: View {
             errorMessage = "Invalid bridge address"
             return
         }
+        UserDefaults.standard.set(bridgeAddress, forKey: "bridgeAddress")
         isConnecting = true
         defer { isConnecting = false }
         do {
