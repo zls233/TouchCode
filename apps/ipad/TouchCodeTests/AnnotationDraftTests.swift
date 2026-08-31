@@ -37,6 +37,23 @@ final class AnnotationDraftTests: XCTestCase {
         XCTAssertEqual(draft.captures.count, 8)
     }
 
+    func testRejectedViewportDoesNotRetainItsDrawing() {
+        var draft = AnnotationDraft()
+        for i in 0..<AnnotationDraft.maximumCaptures {
+            let cap = makeCapture(url: "http://127.0.0.1:5173/", scrollX: Double(i * 100), scrollY: 0)
+            XCTAssertTrue(draft.append(cap, drawing: PKDrawing()))
+        }
+        let point = PKStrokePoint(location: CGPoint(x: 10, y: 10), timeOffset: 0,
+                                  size: CGSize(width: 4, height: 4), opacity: 1, force: 1,
+                                  azimuth: 0, altitude: .pi / 2)
+        let path = PKStrokePath(controlPoints: [point], creationDate: Date())
+        let stroke = PKStroke(ink: PKInk(.pen, color: .systemRed), path: path)
+        let extra = makeCapture(url: "http://127.0.0.1:5173/", scrollX: 9999, scrollY: 9999)
+
+        XCTAssertFalse(draft.append(extra, drawing: PKDrawing(strokes: [stroke])))
+        XCTAssertNil(draft.drawing(for: extra.viewportKey), "a rejected viewport must not retain canonical strokes")
+    }
+
     func testQuantizedViewportKeyToleratesJitter() {
         // ReadyViewportFrame quantizes to 0.1pt, so 0.04 jitter should not create new slot.
         var draft = AnnotationDraft()

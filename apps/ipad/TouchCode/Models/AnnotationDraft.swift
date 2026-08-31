@@ -129,6 +129,14 @@ struct AnnotationDraft {
         let existingIndex = captures.firstIndex(where: { $0.viewportKey.isNearlyEqual(to: targetKey) })
         let viewportKeyForStorage = existingIndex.map { captures[$0].viewportKey } ?? targetKey
 
+        // Reject a new viewport before canonicalizing its drawing. Otherwise a
+        // capture beyond the eight-slot limit still populates the canonical
+        // stroke indexes and can be reconstructed later despite never being
+        // submitted.
+        guard existingIndex != nil || captures.count < Self.maximumCaptures else {
+            return false
+        }
+
         // Canonicalize incoming drawing into CSS space.
         let incomingCanonical = canonicalize(drawing: drawing, viewportKey: viewportKeyForStorage)
         for stroke in incomingCanonical {
