@@ -36,9 +36,9 @@ final class TouchCodeSession: ObservableObject {
             try await discovery.start()
             discoveryTask = Task { [weak self] in
                 guard let self else { return }
-                for await hosts in self.discovery.hosts {
+                for await event in self.discovery.events {
                     if Task.isCancelled { return }
-                    await self.received(hosts)
+                    await self.received(event)
                 }
             }
         } catch {
@@ -63,7 +63,11 @@ final class TouchCodeSession: ObservableObject {
         state = .idle
     }
 
-    private func received(_ hosts: [DiscoveredHost]) async {
+    private func received(_ event: HostDiscoveryEvent) async {
+        guard case let .hosts(hosts) = event else {
+            state = .permissionRequired
+            return
+        }
         discoveredHosts = hosts
         if let selectedHostID, !hosts.contains(where: { $0.id == selectedHostID }) {
             self.selectedHostID = nil
@@ -71,31 +75,34 @@ final class TouchCodeSession: ObservableObject {
             state = hosts.isEmpty ? .unavailable : .discovering
             await transport.disconnect()
         }
-        guard selectedHostID == nil,
-              connectingHostID == nil,
-              let host = hosts.first else {
+        guard selectedHostID == nil, connectingHostID == nil else {
             if hosts.isEmpty, selectedHostID == nil { state = .unavailable }
             return
         }
-        await connect(to: host)
+        await connect(to: hosts)
     }
 
-    private func connect(to host: DiscoveredHost) async {
-        connectingHostID = host.id
-        state = .connecting(host.name)
-        defer { connectingHostID = nil }
-        do {
-            let hello = try await transport.connect(to: host.endpoint)
-            guard let url = TouchCodeAPIClient.validatedBridgeURL(from: hello.bridgeURL) else {
-                throw TouchCodeTransportError.invalidResponse
-            }
-            bridgeURL = url
-            selectedHostID = host.id
-            state = .connected(host.name)
-        } catch {
-            if discoveredHosts.contains(where: { $0.id == host.id }) {
-                state = .unavailable
+    private func connect(to hosts: [DiscoveredHost]) async {
+        for host in hosts {
+            guard discoveredHosts.contains(where: { $0.id == host.id }),
+                  selectedHostID == nil else { break }
+            connectingHostID = host.id
+            state = .connecting(host.name)
+            do {
+                let hello = try await transport.connect(to: host.endpoint)
+                guard let url = TouchCodeAPIClient.validatedBridgeURL(from: hello.bridgeURL) else {
+                    throw TouchCodeTransportError.invalidResponse
+                }
+                bridgeURL = url
+                selectedHostID = host.id
+                state = .connected(host.name)
+                connectingHostID = nil
+                return
+            } catch {
+                connectingHostID = nil
             }
         }
+        connectingHostID = nil
+        if selectedHostID == nil { state = .unavailable }
     }
 }

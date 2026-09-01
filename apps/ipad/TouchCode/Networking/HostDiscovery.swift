@@ -11,22 +11,27 @@ struct DiscoveredHost: Identifiable, @unchecked Sendable {
     let endpoint: TouchCodeEndpoint
 }
 
+enum HostDiscoveryEvent {
+    case hosts([DiscoveredHost])
+    case permissionRequired
+}
+
 @MainActor
 protocol HostDiscovery: AnyObject {
-    var hosts: AsyncStream<[DiscoveredHost]> { get }
+    var events: AsyncStream<HostDiscoveryEvent> { get }
     func start() async throws
     func stop()
 }
 
 @MainActor
 final class BonjourHostDiscovery: HostDiscovery {
-    let hosts: AsyncStream<[DiscoveredHost]>
-    private let continuation: AsyncStream<[DiscoveredHost]>.Continuation
+    let events: AsyncStream<HostDiscoveryEvent>
+    private let continuation: AsyncStream<HostDiscoveryEvent>.Continuation
     private var browser: NWBrowser?
 
     init() {
-        let pair = AsyncStream<[DiscoveredHost]>.makeStream(bufferingPolicy: .bufferingNewest(1))
-        hosts = pair.stream
+        let pair = AsyncStream<HostDiscoveryEvent>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        events = pair.stream
         continuation = pair.continuation
     }
 
@@ -44,9 +49,21 @@ final class BonjourHostDiscovery: HostDiscovery {
             }
         }
         browser.stateUpdateHandler = { [weak self] state in
-            guard case .failed = state else { return }
+            guard case let .waiting(error) = state else {
+                guard case let .failed(error) = state else { return }
+                Task { @MainActor in
+                    if Self.isLocalNetworkPermissionError(error) {
+                        self?.continuation.yield(.permissionRequired)
+                    } else {
+                        self?.continuation.yield(.hosts([]))
+                    }
+                }
+                return
+            }
             Task { @MainActor in
-                self?.continuation.yield([])
+                if Self.isLocalNetworkPermissionError(error) {
+                    self?.continuation.yield(.permissionRequired)
+                }
             }
         }
         self.browser = browser
@@ -56,7 +73,7 @@ final class BonjourHostDiscovery: HostDiscovery {
     func stop() {
         browser?.cancel()
         browser = nil
-        continuation.yield([])
+        continuation.yield(.hosts([]))
     }
 
     private func publish(_ results: Set<NWBrowser.Result>) {
@@ -71,6 +88,11 @@ final class BonjourHostDiscovery: HostDiscovery {
             )
         }
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        continuation.yield(discovered)
+        continuation.yield(.hosts(discovered))
+    }
+
+    private static func isLocalNetworkPermissionError(_ error: NWError) -> Bool {
+        guard case let .posix(code) = error else { return false }
+        return code == .EPERM || code == .EACCES
     }
 }

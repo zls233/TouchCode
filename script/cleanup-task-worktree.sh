@@ -41,7 +41,11 @@ fi
 
 git fetch origin main
 git worktree remove "$worktree_path"
-git branch -d "$branch"
+# A squash merge intentionally leaves the task tip outside main's ancestry, so
+# branch -d rejects a branch that GitHub has already verified as merged. The
+# worktree is gone and the PR state/base were checked above, making this local
+# forced deletion narrowly scoped and safe here.
+git branch -D "$branch"
 git switch main
 git pull --ff-only origin main
 
