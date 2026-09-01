@@ -19,6 +19,7 @@ final class TouchCodeSession: ObservableObject {
     private let transport: TouchCodeTransport
     private var discoveryTask: Task<Void, Never>?
     private var disconnectTail: Task<Void, Never>?
+    private var disconnectSequence = 0
     private var generation = 0
     private var connectingHostID: String?
     private var selectedHostID: String?
@@ -100,6 +101,7 @@ final class TouchCodeSession: ObservableObject {
 
     private func enqueueDisconnect() {
         let previous = disconnectTail
+        disconnectSequence += 1
         disconnectTail = Task { [transport] in
             if let previous { await previous.value }
             await transport.disconnect()
@@ -107,6 +109,7 @@ final class TouchCodeSession: ObservableObject {
     }
 
     private func connect(to hosts: [DiscoveredHost], generation: Int) async {
+        await waitForDisconnectTail()
         for host in hosts {
             guard generation == self.generation else { return }
             guard discoveredHosts.contains(where: { $0.id == host.id }),
@@ -130,5 +133,12 @@ final class TouchCodeSession: ObservableObject {
         }
         connectingHostID = nil
         if selectedHostID == nil { state = .unavailable }
+    }
+
+    private func waitForDisconnectTail() async {
+        guard let tail = disconnectTail else { return }
+        let sequence = disconnectSequence
+        await tail.value
+        if sequence == disconnectSequence { disconnectTail = nil }
     }
 }
