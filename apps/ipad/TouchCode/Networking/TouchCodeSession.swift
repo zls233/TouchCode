@@ -18,7 +18,7 @@ final class TouchCodeSession: ObservableObject {
     private let discovery: HostDiscovery
     private let transport: TouchCodeTransport
     private var discoveryTask: Task<Void, Never>?
-    private var disconnectTask: Task<Void, Never>?
+    private var disconnectTail: Task<Void, Never>?
     private var generation = 0
     private var connectingHostID: String?
     private var selectedHostID: String?
@@ -33,9 +33,9 @@ final class TouchCodeSession: ObservableObject {
 
     func findMac() async {
         guard discoveryTask == nil else { return }
-        if let disconnectTask {
-            await disconnectTask.value
-            self.disconnectTask = nil
+        if let disconnectTail {
+            await disconnectTail.value
+            self.disconnectTail = nil
         }
         generation += 1
         let sessionGeneration = generation
@@ -65,7 +65,7 @@ final class TouchCodeSession: ObservableObject {
         discoveryTask?.cancel()
         discoveryTask = nil
         discovery.stop()
-        disconnectTask = Task { [transport] in await transport.disconnect() }
+        enqueueDisconnect()
         discoveredHosts = []
         connectingHostID = nil
         selectedHostID = nil
@@ -76,10 +76,11 @@ final class TouchCodeSession: ObservableObject {
     private func received(_ event: HostDiscoveryEvent, generation: Int) async {
         guard generation == self.generation else { return }
         guard case let .hosts(hosts) = event else {
+            self.generation += 1
             selectedHostID = nil
             connectingHostID = nil
             bridgeURL = nil
-            disconnectTask = Task { [transport] in await transport.disconnect() }
+            enqueueDisconnect()
             state = .permissionRequired
             return
         }
@@ -88,13 +89,21 @@ final class TouchCodeSession: ObservableObject {
             self.selectedHostID = nil
             bridgeURL = nil
             state = hosts.isEmpty ? .unavailable : .discovering
-            await transport.disconnect()
+            enqueueDisconnect()
         }
         guard selectedHostID == nil, connectingHostID == nil else {
             if hosts.isEmpty, selectedHostID == nil { state = .unavailable }
             return
         }
         await connect(to: hosts, generation: generation)
+    }
+
+    private func enqueueDisconnect() {
+        let previous = disconnectTail
+        disconnectTail = Task { [transport] in
+            if let previous { await previous.value }
+            await transport.disconnect()
+        }
     }
 
     private func connect(to hosts: [DiscoveredHost], generation: Int) async {

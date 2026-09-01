@@ -33,14 +33,19 @@ if [[ "$actual_branch" != "$branch" ]]; then
   exit 1
 fi
 
-pr_status="$(gh pr view "$branch" --json state,mergedAt,baseRefName --jq '[.state, .mergedAt, .baseRefName] | @tsv' 2>/dev/null || true)"
+pr_status="$(gh pr view "$branch" --json state,mergedAt,baseRefName,headRefOid --jq '[.state, .mergedAt, .baseRefName, .headRefOid] | @tsv' 2>/dev/null || true)"
 if [[ -z "$pr_status" ]]; then
   echo "Could not read a GitHub PR for $branch; refusing cleanup." >&2
   exit 1
 fi
-IFS=$'\t' read -r pr_state merged_at base_branch <<< "$pr_status"
-if [[ "$pr_state" != "MERGED" || -z "$merged_at" || "$base_branch" != "main" ]]; then
+IFS=$'\t' read -r pr_state merged_at base_branch head_oid <<< "$pr_status"
+if [[ "$pr_state" != "MERGED" || -z "$merged_at" || "$base_branch" != "main" || ! "$head_oid" =~ ^[0-9a-fA-F]{40}$ ]]; then
   echo "PR for $branch is not a merged PR targeting main; refusing cleanup." >&2
+  exit 1
+fi
+local_oid="$(git rev-parse "refs/heads/$branch" 2>/dev/null || true)"
+if [[ -z "$local_oid" || "$local_oid" != "$head_oid" ]]; then
+  echo "Local branch $branch does not match merged PR head $head_oid; refusing cleanup." >&2
   exit 1
 fi
 

@@ -27,6 +27,14 @@ git -C "$repo" push -q origin main
 worktree="$fixture/worktree"
 git -C "$repo" worktree add -q "$worktree" task/fixture
 worktree="$(cd "$worktree" && pwd -P)"
+fixture_head="$(git -C "$repo" rev-parse refs/heads/task/fixture)"
+stale="$fixture/stale-worktree"
+git -C "$repo" branch -q task/stale main
+git -C "$repo" worktree add -q "$stale" task/stale
+stale="$(cd "$stale" && pwd -P)"
+stale_head="$(git -C "$repo" rev-parse refs/heads/task/stale)"
+echo stale >> "$stale/file"
+git -C "$stale" commit -qam stale
 wrong="$fixture/wrong-worktree"
 git -C "$repo" branch -q task/other main
 git -C "$repo" worktree add -q "$wrong" task/other
@@ -36,17 +44,23 @@ bin="$fixture/bin"
 mkdir "$bin"
 cat > "$bin/gh" <<'EOF'
 #!/usr/bin/env bash
-printf 'MERGED\t2026-09-01T00:00:00Z\tmain\n'
+printf 'MERGED\t2026-09-01T00:00:00Z\tmain\t%s\n' "$GH_HEAD_SHA"
 EOF
 chmod +x "$bin/gh"
-if (cd "$repo" && PATH="$bin:$PATH" "$script_dir/cleanup-task-worktree.sh" task/fixture "$wrong") >/dev/null 2>&1; then
+if (cd "$repo" && GH_HEAD_SHA="$fixture_head" PATH="$bin:$PATH" "$script_dir/cleanup-task-worktree.sh" task/fixture "$wrong") >/dev/null 2>&1; then
   echo "mismatch fixture unexpectedly succeeded" >&2
   exit 1
 fi
 test -e "$wrong/file"
 test -d "$worktree"
 git -C "$repo" worktree remove "$wrong" >/dev/null
-(cd "$repo" && PATH="$bin:$PATH" "$script_dir/cleanup-task-worktree.sh" task/fixture "$worktree") \
+if (cd "$repo" && GH_HEAD_SHA="$stale_head" PATH="$bin:$PATH" "$script_dir/cleanup-task-worktree.sh" task/stale "$stale") >/dev/null 2>&1; then
+  echo "stale-head fixture unexpectedly succeeded" >&2
+  exit 1
+fi
+test -e "$stale/file"
+git -C "$repo" worktree remove "$stale" >/dev/null
+(cd "$repo" && GH_HEAD_SHA="$fixture_head" PATH="$bin:$PATH" "$script_dir/cleanup-task-worktree.sh" task/fixture "$worktree") \
   >/dev/null
 ! git -C "$repo" show-ref --verify --quiet refs/heads/task/fixture
 test ! -e "$worktree"
