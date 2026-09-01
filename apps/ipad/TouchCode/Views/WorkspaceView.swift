@@ -22,13 +22,11 @@ struct WorkspaceView: View {
     @State private var expectedPreviewRevision: Int?
     @State private var appliedRunID: String?
     @State private var submittedDraftRevision: Int?
-    @State private var voiceGestureCenter = CGPoint(x: 400, y: 300)
-    @State private var voiceDecision: VoiceGestureDecision = .neutral
-    @State private var voiceBubblePresented = false
     @State private var edgeAuraVisible = false
     @State private var annotationDraft = AnnotationDraft()
     @State private var connectionState: BridgeConnectionState = .connected
     @StateObject private var speechInput = SpeechInputController()
+    @StateObject private var voiceOrb = VoiceOrbViewModel()
     @FocusState private var composerFocused: Bool
 
     var body: some View {
@@ -43,7 +41,23 @@ struct WorkspaceView: View {
                         .ignoresSafeArea()
                 }
 
-                if voiceBubblePresented { voiceBubble(in: geometry.size) }
+                VoiceOrbView(state: voiceOrb.state, session: voiceOrb.session,
+                             onCancel: { Task { await cancelVoice() } },
+                             onSubmit: { Task { await sendVoice() } },
+                             reduceMotion: reduceMotion, reduceTransparency: reduceTransparency)
+                    .allowsHitTesting(voiceOrb.state.isVisible)
+                // Debug overlay Plan §30 (debug builds)
+                #if DEBUG
+                if voiceOrb.state.isVisible {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(voiceOrb.debugOverlay).font(.caption2.monospaced()).foregroundStyle(.secondary)
+                    }
+                    .padding(8)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                    .position(x: 120, y: 100)
+                    .allowsHitTesting(false)
+                }
+                #endif
 
                 if edgeAuraVisible {
                     RoundedRectangle(cornerRadius: 28)
@@ -76,6 +90,7 @@ struct WorkspaceView: View {
             speechInput.stop()
         }
         .task { await speechInput.prepareModel() }
+        .task { voiceOrb.attach(speech: speechInput) }
         .task { await monitorSession() }
         .statusBarHidden(true)
         .sheet(isPresented: $settingsPresented) { settingsSheet }
@@ -247,10 +262,8 @@ struct WorkspaceView: View {
                     LabeledContent("On-device model", value: speechModelLabel)
                     Button("Voice instruction", systemImage: "mic.fill") {
                         settingsPresented = false
-                        voiceGestureCenter = CGPoint(x: 520, y: 420)
-                        voiceBubblePresented = true
                         workspaceState = .recording
-                        Task { await speechInput.start() }
+                        voiceOrb.handleGesture(.started(CGPoint(x: 520, y: 420)))
                     }
                 }
                 Section {
@@ -325,59 +338,6 @@ struct WorkspaceView: View {
             .background(.regularMaterial.opacity(reduceTransparency ? 0 : 1), in: RoundedRectangle(cornerRadius: 14))
     }
 
-    private func voiceBubble(in size: CGSize) -> some View {
-        VStack(spacing: 10) {
-            Text(combinedSpeechTranscript.isEmpty ? "Listening…" : combinedSpeechTranscript)
-                .font(.callout.weight(.medium))
-                .lineLimit(3)
-                .frame(maxWidth: 280)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 9)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
-
-            HStack(spacing: 14) {
-                voiceActionButton(systemName: "xmark", highlighted: voiceDecision == .cancel) {
-                    Task { await cancelVoice() }
-                }
-                Circle()
-                    .fill(
-                        MeshGradient(width: 3, height: 3, points: [
-                            [0, 0], [0.5, 0], [1, 0], [0, 0.5], [0.5, 0.5], [1, 0.5], [0, 1], [0.5, 1], [1, 1]
-                        ], colors: [.blue, .cyan, .purple, .pink, .orange, .blue, .purple, .cyan, .pink])
-                    )
-                    .overlay {
-                        Image(systemName: "waveform")
-                            .font(.system(size: 34, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .scaleEffect(y: 0.7 + CGFloat(speechInput.audioLevel) * (reduceMotion ? 0 : 0.7))
-                            .animation(reduceMotion ? .none : .easeOut(duration: 0.12), value: speechInput.audioLevel)
-                    }
-                    .frame(width: 116, height: 116)
-                    .glassEffect(.regular.interactive(), in: Circle())
-                voiceActionButton(systemName: "arrow.up", highlighted: voiceDecision == .send) {
-                    Task { await sendVoice() }
-                }
-            }
-        }
-        .position(
-            x: min(max(voiceGestureCenter.x, 130), size.width - 130),
-            y: min(max(voiceGestureCenter.y, 120), size.height - 120)
-        )
-        .zIndex(10)
-    }
-
-    private func voiceActionButton(systemName: String, highlighted: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.title3.bold())
-                .frame(width: 48, height: 48)
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(highlighted ? .white : .primary)
-        .background(highlighted ? Color.accentColor : Color.clear, in: Circle())
-        .glassEffect(.regular.interactive(), in: Circle())
-    }
-
     private func promptPosition(in size: CGSize) -> CGPoint {
         let bounds = drawing.bounds
         return CGPoint(
@@ -400,6 +360,7 @@ struct WorkspaceView: View {
             withAnimation(.easeOut(duration: 0.2)) { edgeAuraVisible = true }
         }
         workspaceState = .submitting
+        voiceOrb.enterProcessing()
         previewRevisionBeforeSubmit = preview.previewRevision
         composerFocused = false
         runStatus = "Sending the marked screenshot to Codex…"
@@ -435,27 +396,33 @@ struct WorkspaceView: View {
                 if preview.previewRevision > previewRevisionBeforeSubmit,
                    isExpectedPreviewRevisionSatisfied(localRevision: preview.previewRevision) {
                     clearAppliedDraft()
+                    voiceOrb.enterSuccess()
                 }
             case "needs_clarification":
                 let question = terminal.clarificationQuestion ?? terminal.summary
                 workspaceState = .needsClarification(question)
                 runStatus = question
+                voiceOrb.enterError(question)
             case "no_change":
                 workspaceState = .failed(terminal.summary)
                 runStatus = terminal.summary
+                voiceOrb.enterError(terminal.summary)
             default:
                 workspaceState = .failed(terminal.summary)
                 runStatus = "Codex failed: \(terminal.summary)"
+                voiceOrb.enterError(terminal.summary)
             }
         } catch {
             if case BridgeError.requestFailed(_, let statusCode) = error, statusCode == 410 {
                 connectionState = .stopped
                 runStatus = "The TouchCode session stopped. Your annotations were kept."
                 workspaceState = .failed(runStatus)
+                voiceOrb.enterError(runStatus)
                 return
             }
             runStatus = error.localizedDescription
             workspaceState = .failed(error.localizedDescription)
+            voiceOrb.enterError(error.localizedDescription)
         }
     }
 
@@ -524,28 +491,25 @@ struct WorkspaceView: View {
     }
 
     private func handleVoiceGesture(_ event: VoiceGestureEvent) {
+        // Anchor-locked orb per Plan §2.1; selection only via dx (Plan §2.2).
+        voiceOrb.handleGesture(event)
         switch event {
-        case .started(let center):
-            voiceGestureCenter = center
-            voiceDecision = .neutral
-            voiceBubblePresented = true
+        case .started:
             workspaceState = .recording
-            Task { await speechInput.start() }
-        case .changed(_, _, let decision):
-            if decision != voiceDecision, decision != .neutral {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            }
-            // The voice affordance is anchored when the 450 ms hold activates.
-            // Keep consuming the live center for gesture decisions, but never
-            // move the presented UI with the fingers after activation.
-            voiceDecision = decision
+        case .changed:
+            break // haptic already handled in ViewModel on selection change
         case .ended(_, let decision):
-            voiceDecision = decision
-            if decision == .cancel { Task { await cancelVoice() } }
-            else if decision == .send { Task { await sendVoice() } }
-            else {
-                Task { await speechInput.stopAndFinalize() }
-                workspaceState = .voiceConfirmation
+            if decision == .cancel {
+                Task { await cancelVoice() }
+            } else if decision == .send {
+                Task { await sendVoice() }
+            } else {
+                // Neutral release -> ready state (Plan §10C)
+                Task {
+                    // ViewModel already stopped recording and set .ready
+                    workspaceState = .voiceConfirmation
+                    runStatus = "Tap ↑ to send or × to cancel."
+                }
             }
         case .cancelled:
             Task { await cancelVoice() }
@@ -553,24 +517,29 @@ struct WorkspaceView: View {
     }
 
     private func cancelVoice() async {
+        voiceOrb.cancelTapped()
         await speechInput.cancel()
-        voiceBubblePresented = false
-        voiceDecision = .neutral
         workspaceState = drawing.strokes.isEmpty ? .browsing : .drafting
     }
 
     private func sendVoice() async {
-        await speechInput.stopAndFinalize()
-        let text = combinedSpeechTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        let combined = combinedSpeechTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Prefer ViewModel session transcript but fallback to combined
+        let text: String
+        if let t = await voiceOrb.submitTapped(), !t.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            text = t
+        } else {
+            await speechInput.stopAndFinalize()
+            text = combined
+        }
         guard !text.isEmpty else {
             runStatus = "No speech was detected. Your annotations were kept."
             workspaceState = .voiceConfirmation
+            voiceOrb.enterError("No speech was detected.")
             return
         }
         instruction = text
         inputMode = "voice"
-        voiceBubblePresented = false
-        voiceDecision = .neutral
         await submit()
     }
 

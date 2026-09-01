@@ -128,6 +128,8 @@ final class TouchInputContainer: UIView {
         }
     }
     private weak var originalScrollDelegate: UIScrollViewDelegate?
+    /// Tracks Pencil active to block Voice Orb per Plan §14.
+    var isPencilActive = false
 
     init(webView: WKWebView, drawing: PKDrawing, enabled: Bool) {
         self.webView = webView
@@ -224,6 +226,10 @@ final class TouchInputContainer: UIView {
 }
 
 extension TouchInputContainer: PKCanvasViewDelegate {
+    func canvasViewDidBeginUsingTool(_ canvasView: PKCanvasView) {
+        isPencilActive = true
+    }
+
     func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
         guard !syncingDrawing else { return }
         let d = canvasView.drawing
@@ -235,8 +241,13 @@ extension TouchInputContainer: PKCanvasViewDelegate {
     }
 
     func canvasViewDidEndUsingTool(_ canvasView: PKCanvasView) {
+        isPencilActive = false
         let handler = onStrokeEnded
         DispatchQueue.main.async { handler?() }
+    }
+
+    func canvasViewDidFinishUsingTool(_ canvasView: PKCanvasView) {
+        isPencilActive = false
     }
 }
 
@@ -250,7 +261,19 @@ extension TouchInputContainer: UIScrollViewDelegate {
 
 extension TouchInputContainer: UIGestureRecognizerDelegate {
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
-                           shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool { true }
+                           shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        // Plan §13: Voice hold candidate yields to WKWebView scroll/pinch until activation.
+        // Once activated, orb claims the gesture; avoid simultaneous scroll that would move page.
+        if let voice = gestureRecognizer as? TwoFingerVoiceGestureRecognizer, voice.isActivated { return false }
+        return true
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        // Plan §14: Pencil active blocks Voice Orb
+        if gestureRecognizer is TwoFingerVoiceGestureRecognizer, isPencilActive { return false }
+        if gestureRecognizer is TwoFingerVoiceGestureRecognizer, touch.type == .pencil { return false }
+        return true
+    }
 }
 
 enum VoiceGestureDecision { case neutral, cancel, send }
@@ -264,11 +287,12 @@ enum VoiceGestureEvent {
 
 /// The policy is kept separate from UIKit so threshold and decision behavior
 /// can be regression-tested without synthesizing touch events.
+/// Updated to Plan §2.2, §3.2: 0.42s hold, 10-14pt move, 2-3% spread, 44pt selection.
 enum TwoFingerGesturePolicy {
-    static let activationDelay: Duration = .milliseconds(450)
-    static let activationMoveLimit: CGFloat = 18
-    static let activationSpreadLimit: CGFloat = 0.12
-    static let actionTranslationLimit: CGFloat = 72
+    static let activationDelay: Duration = .milliseconds(420)
+    static let activationMoveLimit: CGFloat = 12
+    static let activationSpreadLimit: CGFloat = 0.03
+    static let actionTranslationLimit: CGFloat = 44
 
     static func cancelsPendingActivation(moved: CGFloat, spread: CGFloat) -> Bool {
         moved > activationMoveLimit || spread > activationSpreadLimit
@@ -287,9 +311,14 @@ final class TwoFingerVoiceGestureRecognizer: UIGestureRecognizer {
     private var currentCenter = CGPoint.zero
     private var activationTask: Task<Void, Never>?
     private var activated = false
+    var isActivated: Bool { activated }
+    /// Keep anchor fixed at activation point per Plan §2.1; exposed for tests/debug.
+    var anchor: CGPoint { initialCenter }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
+        // Plan §13-14: pencil touch blocks voice; direct (finger) only
+        if event.allTouches?.contains(where: { $0.type == .pencil }) == true { state = .failed; return }
         guard event.allTouches?.filter({ $0.type == .direct }).count == 2 else { return }
         let points = directPoints(in: view, event: event)
         guard points.count == 2 else { return }
