@@ -3,7 +3,7 @@ import SwiftUI
 import Combine
 
 /// Single-state Voice Orb model. WorkspaceView observes this instead of scattered @State flags.
-/// Implements Plan §11 state machine and §9 haptics.
+/// Implements Plan §11 state machine, §9 haptics, §5.5 waveform damping, §29 20-30Hz throttling.
 @MainActor
 final class VoiceOrbViewModel: ObservableObject {
     @Published var state: VoiceOrbState = .hidden
@@ -12,6 +12,10 @@ final class VoiceOrbViewModel: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
     private var speech: SpeechInputController?
+    private var lastAudioUpdate: Date = .distantPast
+    private var lastTranscriptUpdate: Date = .distantPast
+    // Throttle to ~25Hz (40ms) for Plan §29 performance
+    private let audioThrottle: TimeInterval = 0.04
 
     // Threshold from Plan §2.2: 44pt
     let selectionThreshold: CGFloat = 44
@@ -21,12 +25,12 @@ final class VoiceOrbViewModel: ObservableObject {
         speech.objectWillChange.sink { [weak self] _ in
             Task { @MainActor in self?.objectWillChange.send() }
         }.store(in: &cancellables)
-        // Bridge speech transcript -> session transcript + state
+        // Bridge speech transcript -> session transcript + state, throttled
         speech.objectWillChange
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 guard let self else { return }
-                Task { @MainActor in self.syncTranscript() }
+                Task { @MainActor in self.syncTranscriptThrottled(force: false) }
             }.store(in: &cancellables)
     }
 
@@ -37,7 +41,7 @@ final class VoiceOrbViewModel: ObservableObject {
             s.startedAt = Date()
             session = s
             state = .activating
-            // Appear animation 180-240ms then listening
+            // Appear animation 180-240ms then listening (Plan §4)
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(200))
                 guard self.state == .activating else { return }
@@ -56,7 +60,7 @@ final class VoiceOrbViewModel: ObservableObject {
             }
         case .ended(_, let decision):
             guard let sess = session else { return }
-            // Map VoiceGestureDecision (neutral/cancel/send) to selection
+            // Map VoiceGestureDecision (neutral/cancel/send) to selection; also respect current dx-based selection
             let sel: VoiceOrbSelection = decision == .cancel ? .cancel : decision == .send ? .submit : sess.selection
             var updated = sess
             updated.selection = sel
@@ -64,7 +68,12 @@ final class VoiceOrbViewModel: ObservableObject {
             switch sel {
             case .cancel:
                 state = .dismissing
-                Task { await speech?.cancel(); finalizeHidden() }
+                Task {
+                    await speech?.cancel()
+                    // Brief dismiss animation 180ms before hidden
+                    try? await Task.sleep(for: .milliseconds(180))
+                    self.finalizeHidden()
+                }
             case .submit:
                 state = .submitting
                 Task { await speech?.stopAndFinalize(); /* caller triggers AI submission */ }
@@ -75,22 +84,30 @@ final class VoiceOrbViewModel: ObservableObject {
             }
         case .cancelled:
             state = .dismissing
-            Task { await speech?.cancel(); finalizeHidden() }
+            Task {
+                await speech?.cancel()
+                try? await Task.sleep(for: .milliseconds(180))
+                self.finalizeHidden()
+            }
         }
     }
 
     func cancelTapped() {
         state = .dismissing
-        Task { await speech?.cancel(); finalizeHidden() }
+        Task {
+            await speech?.cancel()
+            try? await Task.sleep(for: .milliseconds(180))
+            self.finalizeHidden()
+        }
     }
 
     func submitTapped() async -> String? {
         await speech?.stopAndFinalize()
+        syncTranscriptThrottled(force: true)
         if let t = session?.transcript.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty {
             state = .submitting
             return t
         }
-        // Fallback to speech controller transcript
         let combined = [speech?.transcript ?? "", speech?.volatileTranscript ?? ""].filter{!$0.isEmpty}.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
         if !combined.isEmpty {
             state = .submitting
@@ -105,8 +122,12 @@ final class VoiceOrbViewModel: ObservableObject {
         state = .success
         VoiceOrbHaptics.success()
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(380))
-            finalizeHidden()
+            // Success visible 300-450ms per Plan §17, then fade+scale down
+            try? await Task.sleep(for: .milliseconds(420))
+            // Trigger dismissing before hidden for scale-out
+            self.state = .dismissing
+            try? await Task.sleep(for: .milliseconds(200))
+            self.finalizeHidden()
         }
     }
     func enterError(_ msg: String) {
@@ -114,22 +135,46 @@ final class VoiceOrbViewModel: ObservableObject {
         VoiceOrbHaptics.error()
     }
 
+    func retry() {
+        // Error keeps transcript, go back to ready for resubmit
+        state = .ready
+    }
+
     func dismiss() { finalizeHidden() }
 
     private func finalizeHidden() {
         state = .hidden
         session = nil
+        lastAudioUpdate = .distantPast
+        lastTranscriptUpdate = .distantPast
     }
 
-    private func syncTranscript() {
-        guard var sess = session, state == .listening || state == .transcribing || state == .ready else { return }
+    private func syncTranscriptThrottled(force: Bool) {
+        guard var sess = session, state == .listening || state == .transcribing || state == .ready || state == .activating else { return }
+        let now = Date()
+        let shouldUpdateAudio = force || now.timeIntervalSince(lastAudioUpdate) >= audioThrottle
+        let shouldUpdateTranscript = force || now.timeIntervalSince(lastTranscriptUpdate) >= 0.06 // ~16Hz for text
         let combined = [speech?.transcript ?? "", speech?.volatileTranscript ?? ""].filter{!$0.isEmpty}.joined(separator: " ")
-        sess.transcript = combined
-        // audioLevel with damping
-        let raw = CGFloat(speech?.audioLevel ?? 0)
-        sess.updateAudioLevel(raw)
-        session = sess
-        if !combined.isEmpty && state == .listening { state = .transcribing }
+        var needsPublish = false
+        if shouldUpdateTranscript, sess.transcript != combined {
+            sess.transcript = combined
+            lastTranscriptUpdate = now
+            needsPublish = true
+            if !combined.isEmpty && state == .listening { state = .transcribing }
+        } else if !combined.isEmpty && state == .listening && force {
+            state = .transcribing
+            sess.transcript = combined
+            needsPublish = true
+        }
+        if shouldUpdateAudio {
+            let raw = CGFloat(speech?.audioLevel ?? 0)
+            sess.updateAudioLevel(raw)
+            lastAudioUpdate = now
+            needsPublish = true
+        }
+        if needsPublish {
+            session = sess
+        }
     }
 
     // Debug overlay string Plan §30

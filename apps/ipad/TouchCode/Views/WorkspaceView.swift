@@ -42,8 +42,10 @@ struct WorkspaceView: View {
                 }
 
                 VoiceOrbView(state: voiceOrb.state, session: voiceOrb.session,
+                             containerSize: geometry.size,
                              onCancel: { Task { await cancelVoice() } },
                              onSubmit: { Task { await sendVoice() } },
+                             onRetry: { Task { await retryVoice() } },
                              reduceMotion: reduceMotion, reduceTransparency: reduceTransparency)
                     .allowsHitTesting(voiceOrb.state.isVisible)
                 // Debug overlay Plan §30 (debug builds)
@@ -100,6 +102,10 @@ struct WorkspaceView: View {
                 revision > previewRevisionBeforeSubmit,
                 isExpectedPreviewRevisionSatisfied(localRevision: revision) {
                  clearAppliedDraft()
+                 // Plan §17: success animation after preview confirms
+                 if voiceOrb.state == .processing || voiceOrb.state == .submitting {
+                     voiceOrb.enterSuccess()
+                 }
             }
         }
         .onChange(of: preview.viewportReady) { _, ready in
@@ -433,6 +439,7 @@ struct WorkspaceView: View {
             submittedDraftRevision = nil
             workspaceState = .drafting
             runStatus = "The submitted change is live. New annotations were kept."
+            if voiceOrb.state == .processing { voiceOrb.enterSuccess() }
             return
         }
         instruction = ""
@@ -444,6 +451,10 @@ struct WorkspaceView: View {
         submittedDraftRevision = nil
         workspaceState = .browsing
         runStatus = "Updated in the live preview."
+        // Success haptic + fade handled by voiceOrb; ensure processing -> success if not already
+        if voiceOrb.state == .processing || voiceOrb.state == .submitting {
+            voiceOrb.enterSuccess()
+        }
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(350))
             if reduceMotion {
@@ -538,6 +549,20 @@ struct WorkspaceView: View {
             voiceOrb.enterError("No speech was detected.")
             return
         }
+        instruction = text
+        inputMode = "voice"
+        await submit()
+    }
+
+    private func retryVoice() async {
+        // Error state keeps transcript, allow resubmit
+        let t = voiceOrb.session?.transcript ?? combinedSpeechTranscript
+        let text = t.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else {
+            voiceOrb.retry()
+            return
+        }
+        voiceOrb.retry()
         instruction = text
         inputMode = "voice"
         await submit()
