@@ -34,7 +34,9 @@ final class TouchCodeSession: ObservableObject {
 
     func findMac() async {
         guard discoveryTask == nil else { return }
+        let requestGeneration = generation
         await waitForDisconnectTail()
+        guard requestGeneration == generation else { return }
         generation += 1
         let sessionGeneration = generation
         state = .discovering

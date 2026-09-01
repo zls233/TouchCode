@@ -88,8 +88,14 @@ final class TouchCodeNetworkingTests: XCTestCase {
         XCTAssertEqual(discovery.startCount, 0)
         transport.releaseDisconnect()
         await find.value
+        XCTAssertEqual(discovery.startCount, 0)
+        let retry = Task { await session.retry() }
+        await eventually { transport.disconnectStartCount == 3 }
+        transport.releaseDisconnect()
+        await retry.value
         XCTAssertEqual(discovery.startCount, 1)
         session.stop()
+        await eventually { transport.disconnectStartCount == 4 }
         transport.releaseDisconnect()
     }
 
@@ -109,6 +115,7 @@ final class TouchCodeNetworkingTests: XCTestCase {
         await eventually { session.state == .connected("B") }
         XCTAssertEqual(transport.connectCount, 2)
         session.stop()
+        await eventually { transport.disconnectStartCount == 2 }
         transport.releaseDisconnect()
     }
 
