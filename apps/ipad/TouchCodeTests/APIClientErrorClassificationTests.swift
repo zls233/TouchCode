@@ -16,4 +16,13 @@ final class APIClientErrorClassificationTests: XCTestCase {
         XCTAssertFalse(TouchCodeAPIClient.isPermanentBridgeError(
             URLError(.timedOut)))
     }
+
+    func testBridgeAddressRequiresHTTPHostAndNoQueryOrFragment() {
+        XCTAssertNotNil(TouchCodeAPIClient.validatedBridgeURL(from: "http://192.168.1.10:4317"))
+        XCTAssertNil(TouchCodeAPIClient.validatedBridgeURL(from: "https://192.168.1.10:4317"))
+        XCTAssertNil(TouchCodeAPIClient.validatedBridgeURL(from: "ftp://192.168.1.10:4317"))
+        XCTAssertNil(TouchCodeAPIClient.validatedBridgeURL(from: "http:///4317"))
+        XCTAssertNil(TouchCodeAPIClient.validatedBridgeURL(from: "http://192.168.1.10:4317?token=secret"))
+        XCTAssertNil(TouchCodeAPIClient.validatedBridgeURL(from: "http://192.168.1.10:4317#pair"))
+    }
 }

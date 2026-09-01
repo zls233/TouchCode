@@ -4,6 +4,21 @@ struct TouchCodeAPIClient {
     let bridgeURL: URL
     var urlSession: URLSession = .shared
 
+    /// The Bridge advertises a plain HTTP LAN endpoint. Keep malformed or
+    /// non-HTTP input from reaching URLSession, where it otherwise becomes a
+    /// confusing transport error.
+    static func validatedBridgeURL(from address: String) -> URL? {
+        let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: trimmed),
+              let scheme = url.scheme?.lowercased(), scheme == "http",
+              let host = url.host, !host.isEmpty,
+              url.user == nil, url.password == nil,
+              url.query == nil, url.fragment == nil else {
+            return nil
+        }
+        return url
+    }
+
     func pair(code: String) async throws -> PairedWorkspaceSession {
         var request = URLRequest(url: bridgeURL.appending(path: "v1/sessions/pair"))
         request.httpMethod = "POST"

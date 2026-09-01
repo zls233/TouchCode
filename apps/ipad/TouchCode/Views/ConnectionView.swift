@@ -11,7 +11,7 @@ struct ConnectionView: View {
 
     var body: some View {
         Group {
-            if let session, let bridgeURL = URL(string: bridgeAddress) {
+            if let session, let bridgeURL = TouchCodeAPIClient.validatedBridgeURL(from: bridgeAddress) {
                 WorkspaceView(session: session, bridgeURL: bridgeURL) {
                     self.session = nil
                 }
@@ -59,14 +59,15 @@ struct ConnectionView: View {
     }
 
     private func connect() async {
-        guard let url = URL(string: bridgeAddress) else {
+        guard let url = TouchCodeAPIClient.validatedBridgeURL(from: bridgeAddress) else {
             errorMessage = "Invalid bridge address"
             return
         }
-        UserDefaults.standard.set(bridgeAddress, forKey: "bridgeAddress")
+        bridgeAddress = url.absoluteString
         isConnecting = true
         defer { isConnecting = false }
         do {
+            UserDefaults.standard.set(bridgeAddress, forKey: "bridgeAddress")
             session = try await TouchCodeAPIClient(bridgeURL: url).pair(code: pairingCode)
             errorMessage = nil
         } catch {
