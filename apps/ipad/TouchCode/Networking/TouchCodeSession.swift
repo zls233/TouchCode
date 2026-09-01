@@ -34,10 +34,7 @@ final class TouchCodeSession: ObservableObject {
 
     func findMac() async {
         guard discoveryTask == nil else { return }
-        if let disconnectTail {
-            await disconnectTail.value
-            self.disconnectTail = nil
-        }
+        await waitForDisconnectTail()
         generation += 1
         let sessionGeneration = generation
         state = .discovering
@@ -136,9 +133,12 @@ final class TouchCodeSession: ObservableObject {
     }
 
     private func waitForDisconnectTail() async {
-        guard let tail = disconnectTail else { return }
-        let sequence = disconnectSequence
-        await tail.value
-        if sequence == disconnectSequence { disconnectTail = nil }
+        while let tail = disconnectTail {
+            let sequence = disconnectSequence
+            await tail.value
+            guard sequence == disconnectSequence else { continue }
+            disconnectTail = nil
+            return
+        }
     }
 }

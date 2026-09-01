@@ -73,6 +73,46 @@ final class TouchCodeNetworkingTests: XCTestCase {
     }
 
     @MainActor
+    func testRetryKeepsEveryDisconnectInTheTailBeforeStartingDiscovery() async {
+        let discovery = FakeHostDiscovery()
+        let transport = FakeTransport(results: [], blockDisconnect: true)
+        let session = TouchCodeSession(discovery: discovery, transport: transport)
+
+        session.stop()
+        let find = Task { await session.findMac() }
+        await eventually { transport.disconnectStarted }
+        session.stop()
+        XCTAssertEqual(discovery.startCount, 0)
+        transport.releaseDisconnect()
+        await eventually { transport.disconnectStartCount == 2 }
+        XCTAssertEqual(discovery.startCount, 0)
+        transport.releaseDisconnect()
+        await find.value
+        XCTAssertEqual(discovery.startCount, 1)
+        session.stop()
+        transport.releaseDisconnect()
+    }
+
+    @MainActor
+    func testReplacementHostWaitsForDisconnectBeforeConnectingAndStaysConnected() async {
+        let discovery = FakeHostDiscovery()
+        let transport = FakeTransport(results: [.success(Self.hello), .success(Self.hello)], blockDisconnect: true)
+        let session = TouchCodeSession(discovery: discovery, transport: transport)
+
+        await session.findMac()
+        discovery.send(.hosts([Self.host("A")]))
+        await eventually { session.state == .connected("A") }
+        discovery.send(.hosts([Self.host("B")]))
+        await eventually { transport.disconnectStarted }
+        XCTAssertEqual(transport.connectCount, 1)
+        transport.releaseDisconnect()
+        await eventually { session.state == .connected("B") }
+        XCTAssertEqual(transport.connectCount, 2)
+        session.stop()
+        transport.releaseDisconnect()
+    }
+
+    @MainActor
     func testDelayedOldConnectCannotPublishAfterRetry() async {
         let discovery = FakeHostDiscovery()
         let transport = DelayedTransport()
@@ -134,10 +174,17 @@ private final class FakeHostDiscovery: HostDiscovery {
 private final class FakeTransport: TouchCodeTransport {
     let states: AsyncStream<TransportState> = AsyncStream { $0.finish() }
     private var results: [Result<TouchCodeHello, Error>]
+    private let blockDisconnect: Bool
+    private var disconnectContinuation: CheckedContinuation<Void, Never>?
     private(set) var connectCount = 0
     private(set) var disconnectCount = 0
+    private(set) var disconnectStartCount = 0
+    private(set) var disconnectStarted = false
 
-    init(results: [Result<TouchCodeHello, Error>] = []) { self.results = results }
+    init(results: [Result<TouchCodeHello, Error>] = [], blockDisconnect: Bool = false) {
+        self.results = results
+        self.blockDisconnect = blockDisconnect
+    }
 
     func connect(to endpoint: TouchCodeEndpoint) async throws -> TouchCodeHello {
         connectCount += 1
@@ -145,7 +192,22 @@ private final class FakeTransport: TouchCodeTransport {
         return try results.removeFirst().get()
     }
 
-    func disconnect() async { disconnectCount += 1 }
+    func disconnect() async {
+        disconnectCount += 1
+        disconnectStartCount += 1
+        disconnectStarted = true
+        if blockDisconnect {
+            await withCheckedContinuation { continuation in
+                disconnectContinuation = continuation
+            }
+            disconnectStarted = false
+        }
+    }
+
+    func releaseDisconnect() {
+        disconnectContinuation?.resume()
+        disconnectContinuation = nil
+    }
 }
 
 private final class DelayedTransport: TouchCodeTransport {
