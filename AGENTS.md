@@ -75,19 +75,74 @@ kebab-case description. The date, area, and topic are required so agents can
 identify the document's purpose without opening it. Preserve imported
 documents verbatim unless the task explicitly asks to edit their contents.
 
-## Git workflow
+## Multi-Agent Git workflow
 
-After every completed slice (fix, feature, or refactor), the agent must:
+The repository workflow is **one task, one worktree, one branch, one Pull
+Request**. A worktree belongs to a task, not to an individual agent. Do not
+reuse a completed task worktree for unrelated work.
 
-1. `git add` the changed files.
-2. `git commit -m "<type>(<scope>): <short description>"` with conventional
-   commit style (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`).
-3. `git push` to `origin/main` (or the current branch).
-4. If the push fails due to remote changes, `git pull --rebase` first, then push
-   again.
+### Roles
 
-Do not ask the user to commit or push. Do it automatically after every verified
-slice. Never force-push, rebase interactive, or rewrite history.
+- **Worker Agent** implements one bounded task, tests it, and delivers a Pull
+  Request (PR). It must not merge its own PR.
+- **Review Agent** is read-only by default. It reviews the PR and reports only
+  `Blockers`, `Important issues`, `Minor issues`, and either `APPROVE` or
+  `REQUEST CHANGES`.
+- **Integration / Lead Agent** decomposes work by module ownership, establishes
+  shared API/architecture decisions before dependent tasks run in parallel,
+  coordinates review and performs the final integration/merge.
 
-Never reset, overwrite, delete, push, publish, purchase, or call paid external
-providers without explicit user approval.
+Read-only investigation, planning, and review do not require a separate
+worktree. Every task that changes code, tests, tracked documentation, or build
+configuration does.
+
+### Worker Agent procedure
+
+1. Inspect `git status --short --branch`, `git worktree list`, and the task
+   scope before starting. Preserve unrelated changes.
+2. From the repository's primary checkout, fetch `origin/main` and create a
+   task branch named `task/<short-task-name>` from the latest `origin/main`.
+   Create a separate worktree for that branch. Use
+   `./script/create-task-worktree.sh <short-task-name>` unless the Lead has
+   supplied an already-created task worktree.
+3. Change code **only** in that task worktree; never develop in the `main`
+   worktree. Keep the task's file ownership narrow. If tasks overlap heavily,
+   serialize them. If they have an API or architecture dependency, the Lead
+   must settle the shared contract before workers start implementation.
+4. Keep commits atomic and use conventional commits:
+   `<type>(<scope>): <short description>`.
+5. Run the smallest relevant checks, then broader checks required by
+   [`install_guide.md`](install_guide.md) when the task crosses package/app
+   boundaries. Record commands and results; do not equate a build with a
+   complete device or end-to-end validation.
+6. Self-review `git diff origin/main...HEAD` and `git diff --check`. Do not
+   expand the task into a broad refactor or public API change. Escalate such a
+   need to the Lead and record it in the PR instead.
+7. Push only the task branch, set its upstream, and create a PR targeting
+   `main`. The PR is the standard Worker delivery. Never push directly to
+   `main`, force-push, rebase interactively, merge a PR, or rewrite history.
+
+Use [`.github/pull_request_template.md`](.github/pull_request_template.md) for
+every PR. It requires Summary, Changes, Validation, API Changes, and Risks /
+unresolved issues.
+
+### Review and integration
+
+Review Agents check acceptance criteria, bugs, regressions, race conditions,
+lifecycle behavior, scope creep, API changes, test coverage, and unnecessary
+refactors. They do not modify the Worker branch unless the Lead explicitly
+assigns a follow-up implementation task.
+
+The Lead merges approved PRs using **Squash and merge**, so `main` contains one
+clean commit describing the final task outcome rather than temporary Worker
+commits. Because a squash commit does not retain the task branch as an
+ancestor, after merge the Lead verifies the GitHub PR is merged into `main`,
+removes the task worktree, deletes the task branch, and updates the local
+`main` checkout. Use
+`./script/cleanup-task-worktree.sh task/<short-task-name> <worktree-path>` for
+the local cleanup after that verification.
+
+`git push`, deleting remote branches, merge actions, and destructive cleanup
+remain external-state changes. They require explicit user or Lead integration
+authorization. Never reset, overwrite, delete, publish, purchase, or call paid
+external providers without that authorization.
