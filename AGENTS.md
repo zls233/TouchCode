@@ -50,6 +50,31 @@ remaining risks. Luna implements and independently validates that plan.
 5. Evaluate: acceptance result, regression risk, unverified paths, and the
    next highest-priority slice. Continue the next cycle without repeating work.
 
+## Development documentation
+
+All development-facing Markdown artifacts created by an agent—including plans,
+PRDs, architecture proposals, implementation notes, research, and acceptance
+checklists—must be stored under [`development-docs/`](development-docs/), not
+at the repository root, in `docs/`, or in a temporary directory.
+
+`development-docs/` is intentionally Git-ignored. Treat it as local working
+material: do not stage, commit, or push files from it. When a document becomes
+durable product or contributor documentation, move or rewrite its approved
+content in the appropriate tracked location (for example `README.md` or
+`docs/`) as a separate, explicitly scoped change.
+
+Use a type directory (`plans`, `prds`, `architecture`, `research`, `notes`, or
+`acceptance`) and create one descriptive child directory per artifact:
+
+```text
+development-docs/<type>/YYYY-MM-DD--<area>--<topic>/<document>.md
+```
+
+`<area>` identifies the product surface or module, and `<topic>` is a concise,
+kebab-case description. The date, area, and topic are required so agents can
+identify the document's purpose without opening it. Preserve imported
+documents verbatim unless the task explicitly asks to edit their contents.
+
 ## Git workflow
 
 After every completed slice (fix, feature, or refactor), the agent must:
