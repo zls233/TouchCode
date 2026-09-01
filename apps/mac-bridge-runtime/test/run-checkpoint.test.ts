@@ -30,3 +30,21 @@ test("restores the exact pre-run worktree and removes only files created by the 
   await assert.rejects(readFile(path.join(root, "agent-created.txt")));
   await checkpoint.dispose();
 });
+
+test("includes staged edits in the review diff", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "touchcode-checkpoint-staged-"));
+  await execFileAsync("git", ["init", "--quiet"], { cwd: root });
+  await writeFile(path.join(root, "tracked.txt"), "baseline\n");
+  await execFileAsync("git", ["add", "tracked.txt"], { cwd: root });
+  await execFileAsync("git", ["-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "--quiet", "-m", "baseline"], { cwd: root });
+
+  const checkpoint = await WorkspaceCheckpoint.create(root);
+  assert.ok(checkpoint);
+  await writeFile(path.join(root, "tracked.txt"), "agent edit\n");
+  await execFileAsync("git", ["add", "tracked.txt"], { cwd: root });
+
+  const changes = await checkpoint.collectChanges();
+  assert.deepEqual(changes.changedFiles, ["tracked.txt"]);
+  assert.match(changes.diff, /agent edit/);
+  await checkpoint.dispose();
+});

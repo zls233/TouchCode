@@ -37,24 +37,30 @@ final class BridgeProcessController: ObservableObject {
         }
         child.terminationHandler = { [weak self] process in
             Task { @MainActor in
-                self?.process = nil
-                self?.outputPipe?.fileHandleForReading.readabilityHandler = nil
-                self?.outputPipe = nil
-                if process.terminationStatus == 0 {
-                    self?.state = .stopped
-                } else {
-                    self?.state = .failed("Bridge exited with status \(process.terminationStatus)")
+                guard let self, self.process === process else { return }
+                self.process = nil
+                pipe.fileHandleForReading.readabilityHandler = nil
+                if self.outputPipe === pipe {
+                    self.outputPipe = nil
                 }
+                self.state = process.terminationStatus == 0
+                    ? .stopped
+                    : .failed("Bridge exited with status \(process.terminationStatus)")
             }
         }
 
+        // Publish ownership before launching. Process termination can race the
+        // return from run(), and assigning afterwards can resurrect a dead child.
+        process = child
+        outputPipe = pipe
+        state = .starting
         do {
-            state = .starting
             try child.run()
-            process = child
-            outputPipe = pipe
             state = .running
         } catch {
+            process = nil
+            outputPipe = nil
+            pipe.fileHandleForReading.readabilityHandler = nil
             state = .failed(error.localizedDescription)
         }
     }

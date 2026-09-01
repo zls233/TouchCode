@@ -78,7 +78,29 @@ test("CLI closed loop (mock preview): worktree + pairing + V2 run", async () => 
   assert.equal(final!.json().status, "succeeded");
   assert.match(final!.json().previewRevision ?? "", /^\d+$/);
 
-  // No file assertion for minimal provider
+  // A valid token can inspect a stopped session, while active operations are rejected.
+  fakePreview.emit("exit", 0, null);
+  const stopped = await app.inject({
+    method: "GET",
+    url: `/v1/sessions/${session.sessionId}`,
+    headers: { "x-touchcode-session-token": paired.clientToken },
+  });
+  assert.equal(stopped.statusCode, 200);
+  assert.equal(stopped.json().status, "stopped");
+  const wrongToken = await app.inject({
+    method: "GET",
+    url: `/v1/sessions/${session.sessionId}`,
+    headers: { "x-touchcode-session-token": "wrong-token" },
+  });
+  assert.equal(wrongToken.statusCode, 401);
+  const stoppedEdit = await app.inject({
+    method: "POST",
+    url: `/v1/sessions/${session.sessionId}/edits`,
+    headers: { "x-touchcode-session-token": paired.clientToken },
+    payload: { type: "visual.run.v2", draftId: "stopped", inputMode: "text", instruction: "make it blue", captures: [cap] },
+  });
+  assert.equal(stoppedEdit.statusCode, 410);
+  assert.equal(stoppedEdit.json().error, "session_stopped");
 
   await app.close();
   await execFileAsync("rm", ["-rf", worktree]).catch(() => undefined);

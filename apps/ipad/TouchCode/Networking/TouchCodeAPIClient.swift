@@ -2,6 +2,22 @@ import Foundation
 
 struct TouchCodeAPIClient {
     let bridgeURL: URL
+    var urlSession: URLSession = .shared
+
+    /// The Bridge advertises a plain HTTP LAN endpoint. Keep malformed or
+    /// non-HTTP input from reaching URLSession, where it otherwise becomes a
+    /// confusing transport error.
+    static func validatedBridgeURL(from address: String) -> URL? {
+        let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: trimmed),
+              let scheme = url.scheme?.lowercased(), scheme == "http",
+              let host = url.host, !host.isEmpty,
+              url.user == nil, url.password == nil,
+              url.query == nil, url.fragment == nil else {
+            return nil
+        }
+        return url
+    }
 
     func pair(code: String) async throws -> PairedWorkspaceSession {
         var request = URLRequest(url: bridgeURL.appending(path: "v1/sessions/pair"))
@@ -9,7 +25,7 @@ struct TouchCodeAPIClient {
         request.timeoutInterval = 30
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(PairingBody(pairingCode: code))
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await urlSession.data(for: request)
         try validate(response, data: data, expectedStatus: 200)
         return try JSONDecoder().decode(PairedWorkspaceSession.self, from: data)
     }
@@ -18,9 +34,19 @@ struct TouchCodeAPIClient {
         var request = URLRequest(url: bridgeURL.appending(path: "v1/demo-sessions"))
         request.httpMethod = "POST"
         request.timeoutInterval = 30
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await urlSession.data(for: request)
         try validate(response, data: data, expectedStatus: 201)
         return try JSONDecoder().decode(DemoSession.self, from: data)
+    }
+
+    func heartbeat(session: PairedWorkspaceSession) async throws -> PairedWorkspaceSession {
+        var request = URLRequest(url: bridgeURL.appending(path: "v1/sessions").appending(path: session.sessionId).appending(path: "heartbeat"))
+        request.httpMethod = "POST"
+        request.timeoutInterval = 10
+        request.setValue(session.clientToken, forHTTPHeaderField: "x-touchcode-session-token")
+        let (data, response) = try await urlSession.data(for: request)
+        try validate(response, data: data, expectedStatus: 200)
+        return try JSONDecoder().decode(PairedWorkspaceSession.self, from: data)
     }
 
     func runVisual(
@@ -47,7 +73,7 @@ struct TouchCodeAPIClient {
             captures: capture.captures.map(VisualRunBody.Capture.init),
             provider: "codex"
         ))
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await urlSession.data(for: request)
         // The Bridge accepts the edit request before the run completes.
         // Treat any successful 2xx response (including 202 Accepted) as valid.
         try validate(response, data: data, status: { 200...299 ~= $0 })
@@ -72,8 +98,9 @@ struct TouchCodeAPIClient {
                     return terminal
                 }
             } catch {
-                // Retry on transient network errors; propagate validation failures immediately.
-                if let bridge = error as? BridgeError, case .requestFailed(let message) = bridge, message.contains("Unknown coding run") {
+                // Retry only transient network/server errors. Authentication and an unknown
+                // run cannot become valid during this request and must reach the UI immediately.
+                if Self.isPermanentBridgeError(error) {
                     throw error
                 }
             }
@@ -101,7 +128,7 @@ struct TouchCodeAPIClient {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 10
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await urlSession.data(for: request)
             try validate(response, data: data, status: { 200...299 ~= $0 })
             let snapshot = try JSONDecoder().decode(CodingRunSnapshot.self, from: data)
             if ["succeeded", "failed", "cancelled"].contains(snapshot.status) {
@@ -109,6 +136,7 @@ struct TouchCodeAPIClient {
             }
             return nil
         } catch {
+            if Self.isPermanentBridgeError(error) { throw error }
             return nil
         }
     }
@@ -131,10 +159,10 @@ struct TouchCodeAPIClient {
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         if let lastEventId { request.setValue(lastEventId, forHTTPHeaderField: "Last-Event-ID") }
         request.timeoutInterval = 90
-        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        let (bytes, response) = try await urlSession.bytes(for: request)
         guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
-            let message = "TouchCode Bridge returned an invalid response."
-            throw BridgeError.requestFailed(message)
+            let statusCode = (response as? HTTPURLResponse)?.statusCode
+            throw BridgeError.requestFailed("TouchCode Bridge returned HTTP \(statusCode ?? 0).", statusCode: statusCode)
         }
         for try await rawLine in bytes.lines {
             if Task.isCancelled { throw CancellationError() }
@@ -170,8 +198,13 @@ struct TouchCodeAPIClient {
     ) throws {
         guard let http = response as? HTTPURLResponse, status(http.statusCode) else {
             let message = String(data: data, encoding: .utf8) ?? "TouchCode Bridge returned an invalid response."
-            throw BridgeError.requestFailed(message)
+            throw BridgeError.requestFailed(message, statusCode: (response as? HTTPURLResponse)?.statusCode)
         }
+    }
+
+    static func isPermanentBridgeError(_ error: Error) -> Bool {
+        guard case .requestFailed(_, let statusCode) = error as? BridgeError else { return false }
+        return statusCode == 401 || statusCode == 403 || statusCode == 404 || statusCode == 410
     }
 }
 
@@ -216,12 +249,12 @@ private struct VisualRunBody: Encodable {
     }
 }
 
-private enum BridgeError: LocalizedError {
-    case requestFailed(String)
+enum BridgeError: LocalizedError {
+    case requestFailed(String, statusCode: Int? = nil)
 
     var errorDescription: String? {
         switch self {
-        case .requestFailed(let message): return message
+        case .requestFailed(let message, _): return message
         }
     }
 }

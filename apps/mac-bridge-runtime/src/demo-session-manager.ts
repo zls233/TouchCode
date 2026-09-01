@@ -1,4 +1,4 @@
-import { appendFile, cp, mkdir, readFile, readlink, symlink } from "node:fs/promises";
+import { appendFile, cp, mkdir, readFile, readlink, rm, symlink } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { homedir, networkInterfaces } from "node:os";
@@ -15,7 +15,14 @@ const workspaceRoot = path.resolve(moduleDirectory, "../../..");
 const demoTemplatePath = path.join(workspaceRoot, "packages/demo-web");
 const sessionsRoot = path.join(workspaceRoot, ".touchcode/sessions");
 
-type SessionStatus = "starting" | "running" | "stopped";
+export type SessionStatus = "starting" | "running" | "stopped";
+
+export class SessionLifecycleError extends Error {
+  constructor(readonly code: "session_not_found" | "session_token_invalid" | "session_stopped") {
+    super(code);
+    this.name = "SessionLifecycleError";
+  }
+}
 
 export type WorkspaceSessionRecord = {
   sessionId: string;
@@ -25,6 +32,7 @@ export type WorkspaceSessionRecord = {
   ipadConnected: boolean;
   latestRunId: string | null;
   errorMessage: string | null;
+  status: SessionStatus;
 };
 
 type ManagedSession = WorkspaceSessionRecord & {
@@ -194,6 +202,9 @@ export class DemoSessionManager {
     } catch (error) {
       child.kill();
       this.#sessions.delete(sessionId);
+      // A session that never became ready is not user work. Remove the copied
+      // workspace so repeated failed startups do not leak files on disk.
+      await rm(sessionPath, { recursive: true, force: true }).catch(() => undefined);
       throw error;
     }
     return this.publicRecord(record);
@@ -233,7 +244,7 @@ export class DemoSessionManager {
 
   get(sessionId: string) {
     const record = this.#sessions.get(sessionId);
-    if (!record) throw new Error("Unknown TouchCode session");
+    if (!record) throw new SessionLifecycleError("session_not_found");
     return record;
   }
 
@@ -257,12 +268,18 @@ export class DemoSessionManager {
   }
 
   authorize(sessionId: string, token: string | undefined) {
-    const record = this.get(sessionId);
-    if (!token || !tokensMatch(record.clientToken, token)) {
-      throw new Error("Session token is invalid");
-    }
+    const record = this.#sessions.get(sessionId);
+    if (!record) throw new SessionLifecycleError("session_not_found");
+    if (!token || !tokensMatch(record.clientToken, token)) throw new SessionLifecycleError("session_token_invalid");
+    if (record.status === "running" && record.process.exitCode !== null) record.status = "stopped";
     record.lastHeartbeatAt = Date.now();
     record.ipadConnected = true;
+    return record;
+  }
+
+  authorizeActive(sessionId: string, token: string | undefined) {
+    const record = this.authorize(sessionId, token);
+    if (record.status !== "running") throw new SessionLifecycleError("session_stopped");
     return record;
   }
 
@@ -303,6 +320,7 @@ export class DemoSessionManager {
       ipadConnected,
       latestRunId: record.latestRunId,
       errorMessage: record.errorMessage,
+      status: record.status,
     };
   }
 }

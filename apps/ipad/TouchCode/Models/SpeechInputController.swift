@@ -20,6 +20,7 @@ final class SpeechInputController: ObservableObject {
     private var analysisTask: Task<Void, Never>?
     private var resultTask: Task<Void, Never>?
     private var operationGeneration = 0
+    private var isStarting = false
     private var selectedLocale = Locale.current
 
     func prepareModel(locale: Locale = .current) async {
@@ -46,7 +47,9 @@ final class SpeechInputController: ObservableObject {
     }
 
     func start() async {
-        guard !isRecording else { return }
+        guard !isRecording, !isStarting else { return }
+        isStarting = true
+        defer { isStarting = false }
         operationGeneration &+= 1
         let generation = operationGeneration
         do {
@@ -169,8 +172,10 @@ final class SpeechInputController: ObservableObject {
     }
 
     func stopAndFinalize() async {
-        guard isRecording || analyzer != nil else { return }
+        // Invalidate an in-flight permission/model setup as well as an active
+        // recording. Otherwise canceling during setup can still open the mic.
         operationGeneration &+= 1
+        guard isRecording || analyzer != nil else { return }
         if audioEngine.isRunning {
             audioEngine.stop()
             audioEngine.inputNode.removeTap(onBus: 0)

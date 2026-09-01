@@ -41,8 +41,9 @@ the repository, or an occupied preview port. It creates a detached worktree unde
    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./script/build_ipad.sh
    ```
 
-   The default destination is the iPad Pro 13-inch (M5) simulator. Override it
-   with `TOUCHCODE_XCODE_DESTINATION='platform=iOS Simulator,id=SIMULATOR_ID'`
+   The script prefers an iPad Pro 13-inch (M5), then an iPad Pro 11-inch (M5),
+   then any available iPad simulator. Override it with
+   `TOUCHCODE_XCODE_DESTINATION='platform=iOS Simulator,id=SIMULATOR_ID'`
    when needed. For device signing and launch, open
    `apps/ipad/TouchCode.xcodeproj` in Xcode and run it on an iPad.
 2. Enter the `Bridge` URL and six-digit `Pairing code` printed by the CLI.
@@ -58,7 +59,12 @@ the repository, or an occupied preview port. It creates a detached worktree unde
    forced reload is issued by the client.
 
 Stopping with Ctrl-C terminates the preview and Bridge but preserves the isolated
-worktree. The CLI prints that worktree path so it can be inspected manually.
+worktree. If the preview exits unexpectedly, the CLI keeps the Bridge listening
+and marks the session `status: "stopped"` so the paired iPad can inspect the
+session and show a compact stopped banner; editing, run polling, SSE, Keep, and
+Undo return HTTP 410 with `error: "session_stopped"`. A valid token is still
+required for inspection and heartbeat, while missing or wrong tokens return
+HTTP 401. The CLI prints the worktree path so it can be inspected manually.
 
 ## Security and evidence boundary
 

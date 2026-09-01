@@ -27,6 +27,7 @@ struct WorkspaceView: View {
     @State private var voiceBubblePresented = false
     @State private var edgeAuraVisible = false
     @State private var annotationDraft = AnnotationDraft()
+    @State private var connectionState: BridgeConnectionState = .connected
     @StateObject private var speechInput = SpeechInputController()
     @FocusState private var composerFocused: Bool
 
@@ -62,6 +63,7 @@ struct WorkspaceView: View {
 
                 VStack(spacing: 12) {
                     Spacer()
+                    if connectionState != .connected { connectionBanner }
                     if !runStatus.isEmpty { statusToast }
                     if composerPresented { commandComposer }
                     controlDock
@@ -74,6 +76,7 @@ struct WorkspaceView: View {
             speechInput.stop()
         }
         .task { await speechInput.prepareModel() }
+        .task { await monitorSession() }
         .statusBarHidden(true)
         .sheet(isPresented: $settingsPresented) { settingsSheet }
         .onChange(of: preview.previewRevision) { _, revision in
@@ -225,7 +228,7 @@ struct WorkspaceView: View {
         NavigationStack {
             Form {
                 Section("Connection") {
-                    LabeledContent("Status", value: "Connected")
+                    LabeledContent("Status", value: connectionLabel)
                     LabeledContent("Session", value: String(session.sessionId.prefix(8)))
                     Button("Reload preview", systemImage: "arrow.clockwise") { preview.reload() }
                 }
@@ -255,6 +258,49 @@ struct WorkspaceView: View {
                 }
             }
             .navigationTitle("TouchCode")
+        }
+    }
+
+    private var connectionLabel: String {
+        switch connectionState {
+        case .connected: "Connected"
+        case .unreachable: "Bridge unreachable"
+        case .stopped: "Session stopped"
+        case .credentialsRejected: "Credentials rejected"
+        }
+    }
+
+    private var connectionBanner: some View {
+        Text(connectionLabel)
+            .font(.footnote.weight(.medium))
+            .foregroundStyle(connectionState == .stopped ? .orange : .secondary)
+            .padding(.horizontal, 14).padding(.vertical, 9)
+            .background(.regularMaterial, in: Capsule())
+    }
+
+    private func monitorSession() async {
+        var delay: UInt64 = 5_000_000_000
+        while !Task.isCancelled {
+            do {
+                let current = try await TouchCodeAPIClient(bridgeURL: bridgeURL).heartbeat(session: session)
+                connectionState = current.status == "stopped" ? .stopped : .connected
+                delay = 5_000_000_000
+            } catch let error as BridgeError {
+                if case .requestFailed(_, let statusCode) = error, statusCode == 410 {
+                    connectionState = .stopped
+                    break
+                }
+                if case .requestFailed(_, let statusCode) = error, statusCode == 401 || statusCode == 403 {
+                    connectionState = .credentialsRejected
+                    break
+                }
+                connectionState = .unreachable
+                delay = min(delay * 2, 30_000_000_000)
+            } catch {
+                connectionState = .unreachable
+                delay = min(delay * 2, 30_000_000_000)
+            }
+            try? await Task.sleep(nanoseconds: delay)
         }
     }
 
@@ -341,6 +387,10 @@ struct WorkspaceView: View {
     }
 
     private func submit() async {
+        guard connectionState == .connected else {
+            runStatus = connectionLabel
+            return
+        }
         let request = instruction.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !drawing.strokes.isEmpty || !annotationDraft.captures.isEmpty || (!request.isEmpty && inputMode == "voice") else { return }
         isRunning = true
@@ -398,6 +448,12 @@ struct WorkspaceView: View {
                 runStatus = "Codex failed: \(terminal.summary)"
             }
         } catch {
+            if case BridgeError.requestFailed(_, let statusCode) = error, statusCode == 410 {
+                connectionState = .stopped
+                runStatus = "The TouchCode session stopped. Your annotations were kept."
+                workspaceState = .failed(runStatus)
+                return
+            }
             runStatus = error.localizedDescription
             workspaceState = .failed(error.localizedDescription)
         }

@@ -106,12 +106,12 @@ struct OverviewView: View {
                                 .buttonStyle(.borderedProminent)
                             }
                             .disabled(workspace.isReviewing)
-                        } else if run.decision != "pending" {
+                        } else if let decisionLabel = run.decisionLabel {
                             Label(
-                                run.decision == "kept" ? "Changes kept" : "Changes undone",
-                                systemImage: run.decision == "kept" ? "checkmark.circle.fill" : "arrow.uturn.backward.circle.fill"
+                                decisionLabel,
+                                systemImage: run.decisionIcon
                             )
-                            .foregroundStyle(run.decision == "kept" ? .green : .orange)
+                            .foregroundStyle(run.decision == "approved" ? .green : .orange)
                         }
                         if let error = workspace.reviewError {
                             Text(error).foregroundStyle(.red)

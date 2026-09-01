@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import net from "node:net";
 import path from "node:path";
 import { promisify } from "node:util";
 import test from "node:test";
 import {
   prepareWorkspace,
   removeFailedWorkspace,
+  startPreview,
 } from "../src/project-workspace.js";
 
 const execFileAsync = promisify(execFile);
@@ -21,8 +23,9 @@ async function temporaryRepository() {
   await git(root, "init", "-b", "main");
   await git(root, "config", "user.email", "touchcode-tests@example.invalid");
   await git(root, "config", "user.name", "TouchCode tests");
+  await writeFile(path.join(root, ".gitignore"), "node_modules/\n");
   await writeFile(path.join(root, "README.md"), "clean\n");
-  await git(root, "add", "README.md");
+  await git(root, "add", ".gitignore", "README.md");
   await git(root, "commit", "-m", "initial");
   return root;
 }
@@ -59,6 +62,46 @@ test("prepares a detached worktree and keeps --cwd inside it", async () => {
     await removeFailedWorkspace(workspace);
     await assert.rejects(() => readFile(workspace.worktreePath), { code: "ENOENT" });
   });
+});
+
+test("failed-workspace cleanup removes dependency symlinks without touching source dependencies", async () => {
+  await withRepository(async (root) => {
+    await mkdir(path.join(root, "node_modules"));
+    await writeFile(path.join(root, "node_modules", "keep.txt"), "source dependency\n");
+    const workspace = await prepareWorkspace({
+      projectPath: root,
+      projectCwd: ".",
+      worktreesRoot: path.join(root, "worktrees"),
+    });
+
+    assert.equal((await realpath(path.join(workspace.worktreePath, "node_modules"))), await realpath(path.join(root, "node_modules")));
+    await removeFailedWorkspace(workspace);
+    assert.equal(await readFile(path.join(root, "node_modules", "keep.txt"), "utf8"), "source dependency\n");
+    await assert.rejects(() => readFile(path.join(workspace.worktreePath, "node_modules")), { code: "ENOENT" });
+  });
+});
+
+test("requires an HTTP preview response before reporting readiness", async () => {
+  const server = await new Promise<net.Server>((resolve, reject) => {
+    const candidate = net.createServer();
+    candidate.once("error", reject);
+    candidate.listen(0, "127.0.0.1", () => resolve(candidate));
+  });
+  const address = server.address();
+  assert.ok(address && typeof address !== "string");
+  const port = address.port;
+  server.close();
+
+  const workspace = { sourceRoot: ".", worktreePath: ".", commandCwd: "." };
+  await assert.rejects(
+    () => startPreview({
+      workspace,
+      command: [process.execPath, "-e", `require('node:net').createServer(() => {}).listen(${port}, '127.0.0.1')`],
+      port,
+      timeoutMilliseconds: 700,
+    }),
+    /Preview did not listen on port/,
+  );
 });
 
 test("requires the project path to be the Git repository root", async () => {
