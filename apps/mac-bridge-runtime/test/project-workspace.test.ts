@@ -23,8 +23,9 @@ async function temporaryRepository() {
   await git(root, "init", "-b", "main");
   await git(root, "config", "user.email", "touchcode-tests@example.invalid");
   await git(root, "config", "user.name", "TouchCode tests");
+  await writeFile(path.join(root, ".gitignore"), "node_modules/\n");
   await writeFile(path.join(root, "README.md"), "clean\n");
-  await git(root, "add", "README.md");
+  await git(root, "add", ".gitignore", "README.md");
   await git(root, "commit", "-m", "initial");
   return root;
 }
@@ -60,6 +61,23 @@ test("prepares a detached worktree and keeps --cwd inside it", async () => {
 
     await removeFailedWorkspace(workspace);
     await assert.rejects(() => readFile(workspace.worktreePath), { code: "ENOENT" });
+  });
+});
+
+test("failed-workspace cleanup removes dependency symlinks without touching source dependencies", async () => {
+  await withRepository(async (root) => {
+    await mkdir(path.join(root, "node_modules"));
+    await writeFile(path.join(root, "node_modules", "keep.txt"), "source dependency\n");
+    const workspace = await prepareWorkspace({
+      projectPath: root,
+      projectCwd: ".",
+      worktreesRoot: path.join(root, "worktrees"),
+    });
+
+    assert.equal((await realpath(path.join(workspace.worktreePath, "node_modules"))), await realpath(path.join(root, "node_modules")));
+    await removeFailedWorkspace(workspace);
+    assert.equal(await readFile(path.join(root, "node_modules", "keep.txt"), "utf8"), "source dependency\n");
+    await assert.rejects(() => readFile(path.join(workspace.worktreePath, "node_modules")), { code: "ENOENT" });
   });
 });
 

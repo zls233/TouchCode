@@ -1,4 +1,4 @@
-import { appendFile, cp, mkdir, readFile, readlink, symlink } from "node:fs/promises";
+import { appendFile, cp, mkdir, readFile, readlink, rm, symlink } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { homedir, networkInterfaces } from "node:os";
@@ -202,6 +202,9 @@ export class DemoSessionManager {
     } catch (error) {
       child.kill();
       this.#sessions.delete(sessionId);
+      // A session that never became ready is not user work. Remove the copied
+      // workspace so repeated failed startups do not leak files on disk.
+      await rm(sessionPath, { recursive: true, force: true }).catch(() => undefined);
       throw error;
     }
     return this.publicRecord(record);
