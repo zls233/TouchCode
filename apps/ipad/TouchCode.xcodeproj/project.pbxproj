@@ -8,8 +8,80 @@
 	<dict/>
 	<key>objectVersion</key>
 	<string>56</string>
-	<key>objects</key>
-	<dict>
+		<key>objects</key>
+		<dict>
+		<key>A30000000000000000000001</key>
+		<dict>
+			<key>fileRef</key>
+			<string>B30000000000000000000001</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>A30000000000000000000002</key>
+		<dict>
+			<key>fileRef</key>
+			<string>B30000000000000000000002</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>A30000000000000000000003</key>
+		<dict>
+			<key>fileRef</key>
+			<string>B30000000000000000000003</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>A30000000000000000000004</key>
+		<dict>
+			<key>fileRef</key>
+			<string>B30000000000000000000004</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>B30000000000000000000001</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>HostDiscovery.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B30000000000000000000002</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>TouchCodeTransport.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B30000000000000000000003</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>TouchCodeSession.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B30000000000000000000004</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>TouchCodeNetworkingTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>A10000000000000000000001</key>
 		<dict>
 			<key>fileRef</key>
@@ -195,6 +267,9 @@
 			<string>2147483647</string>
 			<key>files</key>
 			<array>
+				<string>A30000000000000000000001</string>
+				<string>A30000000000000000000002</string>
+				<string>A30000000000000000000003</string>
 				<string>A10000000000000000000001</string>
 				<string>A10000000000000000000002</string>
 				<string>A10000000000000000000003</string>
@@ -274,6 +349,9 @@
 			<key>children</key>
 			<array>
 				<string>B10000000000000000000003</string>
+				<string>B30000000000000000000001</string>
+				<string>B30000000000000000000002</string>
+				<string>B30000000000000000000003</string>
 			</array>
 			<key>isa</key>
 			<string>PBXGroup</string>
@@ -767,6 +845,7 @@
 			<array>
 				<string>B20000000000000000000001</string>
 				<string>B20000000000000000000002</string>
+				<string>B30000000000000000000004</string>
 			</array>
 			<key>path</key>
 			<string>TouchCodeTests</string>
@@ -832,6 +911,7 @@
 			<array>
 				<string>A20000000000000000000001</string>
 				<string>A20000000000000000000002</string>
+				<string>A30000000000000000000004</string>
 			</array>
 			<key>runOnlyForDeploymentPostprocessing</key>
 			<integer>0</integer>

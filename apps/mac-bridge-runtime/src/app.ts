@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   acceptedVisualRunRequestSchema,
   pairSessionRequestSchema,
+  touchCodeProtocolVersion,
   type AnnotationCapture,
   type AcceptedVisualRunRequest,
 } from "@touchcode/protocol";
@@ -66,6 +67,15 @@ export async function createBridgeApp(options: BridgeAppOptions = {}) {
     service: "touchcode-mac-bridge",
     role: "bridge",
     version: "0.1.0",
+  }));
+
+  app.get("/v1/hello", async () => ({
+    protocolVersion: touchCodeProtocolVersion,
+    role: "host" as const,
+    platform: "macOS" as const,
+    appVersion: "0.1.0",
+    capabilities: ["pairing", "workspace", "preview", "codex"],
+    bridgeURL: options.bridgeBaseURL ?? "http://127.0.0.1:4317",
   }));
 
   // Kept only so the paused Mac GUI can still launch its bundled demo.

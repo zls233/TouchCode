@@ -19,7 +19,11 @@
   <key>CFBundleDisplayName</key>
   <string>TouchCode</string>
   <key>NSLocalNetworkUsageDescription</key>
-  <string>TouchCode connects to the Mac bridge and local development preview.</string>
+  <string>TouchCode finds and connects to your Mac so your current workspace appears on iPad.</string>
+  <key>NSBonjourServices</key>
+  <array>
+    <string>_touchcode._tcp</string>
+  </array>
   <key>NSMicrophoneUsageDescription</key>
   <string>TouchCode uses the microphone to turn spoken editing instructions into text.</string>
   <key>NSSpeechRecognitionUsageDescription</key>

@@ -107,12 +107,16 @@ condition instead of bypassing the guard.
 2. Select the `TouchCode` scheme and the connected iPad.
 3. Configure the signing team for bundle identifier `com.touchcode.ipad`.
 4. Build and run the app.
-5. Enter the Bridge URL and pairing code printed by the Mac CLI.
-6. Accept Local Network, Microphone, and Speech Recognition permissions when
+5. Tap **Find My Mac**, accept Local Network access, and wait for the iPad to
+   display the discovered Mac as connected.
+6. Enter the six-digit pairing code printed by the Mac CLI. Manual Bridge URL
+   entry remains available under **Connect manually** as a debug/fallback path.
+7. Accept Microphone and Speech Recognition permissions when
    prompted.
 
-The Mac and iPad must be on the same trusted network. Use the Mac's LAN address
-printed by the CLI, not `127.0.0.1` or `localhost`.
+The Mac and iPad must be on the same trusted network. Normal use does not require
+an IP address. If Bonjour is unavailable and the manual fallback is required,
+use the Mac's LAN address printed by the CLI, not `127.0.0.1` or `localhost`.
 
 ### Simulator
 
@@ -168,9 +172,11 @@ or compiling one target. Report each verified layer separately:
 2. `pnpm check`, `pnpm test`, and `pnpm build` completed.
 3. The iPad target compiled, and the exact Xcode destination was recorded.
 4. The CLI started against a clean test web project and printed pairing data.
-5. The preview and authenticated Bridge API were exercised.
-6. The iPad paired and displayed the preview.
-7. On a physical iPad, Pencil, scrolling/zooming, two-finger voice gestures,
+5. The CLI advertised `_touchcode._tcp` and the versioned `/v1/hello` handshake
+   was exercised through the resolved Bonjour endpoint.
+6. The preview and authenticated Bridge API were exercised.
+7. The iPad discovered the Mac, paired, and displayed the preview.
+8. On a physical iPad, Pencil, scrolling/zooming, two-finger voice gestures,
    microphone permission, transcription, and a real edit were exercised.
 
 If a layer cannot be verified, state it as unverified. Simulator success is not

@@ -1,5 +1,16 @@
 import { z } from "zod";
 
+export const touchCodeProtocolVersion = 1 as const;
+
+export const touchCodeHelloSchema = z.object({
+  protocolVersion: z.literal(touchCodeProtocolVersion),
+  role: z.literal("host"),
+  platform: z.literal("macOS"),
+  appVersion: z.string().min(1),
+  capabilities: z.array(z.string().min(1)),
+  bridgeURL: z.string().url(),
+});
+
 export const pointSchema = z.object({
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),
@@ -256,3 +267,4 @@ export type VisualRunRequestV2 = z.infer<typeof visualRunRequestV2Schema>;
 export type AcceptedVisualRunRequest = z.infer<typeof acceptedVisualRunRequestSchema>;
 export type CodingRunResult = z.infer<typeof codingRunResultSchema>;
 export type CodingRunSnapshot = z.infer<typeof codingRunSnapshotSchema>;
+export type TouchCodeHello = z.infer<typeof touchCodeHelloSchema>;

@@ -3,7 +3,7 @@ import { mkdtemp, readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { pairedWorkspaceSessionSchema, type CodingRunRequest } from "@touchcode/protocol";
+import { pairedWorkspaceSessionSchema, touchCodeHelloSchema, type CodingRunRequest } from "@touchcode/protocol";
 import { createBridgeApp } from "../src/app.js";
 import { CodingAgentRegistry, type CodingAgentProvider } from "../src/coding-agents/provider.js";
 import type { DemoSessionManager } from "../src/demo-session-manager.js";
@@ -18,6 +18,18 @@ test("identifies itself as a bridge rather than a coding agent", async () => {
     role: "bridge",
     version: "0.1.0",
   });
+  await app.close();
+});
+
+test("negotiates the first versioned TouchCode hello without exposing workspace metadata", async () => {
+  const app = await createBridgeApp({ bridgeBaseURL: "http://192.0.2.10:4317" });
+  const response = await app.inject({ method: "GET", url: "/v1/hello" });
+  assert.equal(response.statusCode, 200);
+  const hello = touchCodeHelloSchema.parse(response.json());
+  assert.equal(hello.protocolVersion, 1);
+  assert.equal(hello.bridgeURL, "http://192.0.2.10:4317");
+  assert.equal("workspacePath" in response.json(), false);
+  assert.equal("pairingCode" in response.json(), false);
   await app.close();
 });
 
