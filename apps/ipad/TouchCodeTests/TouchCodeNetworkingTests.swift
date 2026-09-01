@@ -30,6 +30,21 @@ final class TouchCodeNetworkingTests: XCTestCase {
     }
 
     @MainActor
+    func testPermissionFailureClearsExistingConnection() async {
+        let discovery = FakeHostDiscovery()
+        let transport = FakeTransport(results: [.success(Self.hello)])
+        let session = TouchCodeSession(discovery: discovery, transport: transport)
+        await session.findMac()
+        discovery.send(.hosts([Self.host("mac")]))
+        await eventually { session.state == .connected("mac") }
+
+        discovery.send(.permissionRequired)
+        await eventually { session.state == .permissionRequired }
+        XCTAssertNil(session.bridgeURL)
+        XCTAssertGreaterThan(transport.disconnectCount, 0)
+    }
+
+    @MainActor
     func testConnectionFallsBackToNextHostAfterFirstFailure() async {
         let discovery = FakeHostDiscovery()
         let transport = FakeTransport(results: [
@@ -54,6 +69,23 @@ final class TouchCodeNetworkingTests: XCTestCase {
         XCTAssertEqual(session.state, .idle)
         await session.retry()
         XCTAssertEqual(discovery.startCount, 2)
+        session.stop()
+    }
+
+    @MainActor
+    func testDelayedOldConnectCannotPublishAfterRetry() async {
+        let discovery = FakeHostDiscovery()
+        let transport = DelayedTransport()
+        let session = TouchCodeSession(discovery: discovery, transport: transport)
+        await session.findMac()
+        discovery.send(.hosts([Self.host("old")]))
+        await eventually { transport.connectStarted }
+
+        session.stop()
+        await session.retry()
+        transport.resolveOld(with: Self.hello)
+        try? await Task.sleep(for: .milliseconds(30))
+        XCTAssertNotEqual(session.state, .connected("old"))
         session.stop()
     }
 
@@ -103,6 +135,7 @@ private final class FakeTransport: TouchCodeTransport {
     let states: AsyncStream<TransportState> = AsyncStream { $0.finish() }
     private var results: [Result<TouchCodeHello, Error>]
     private(set) var connectCount = 0
+    private(set) var disconnectCount = 0
 
     init(results: [Result<TouchCodeHello, Error>] = []) { self.results = results }
 
@@ -110,6 +143,26 @@ private final class FakeTransport: TouchCodeTransport {
         connectCount += 1
         guard !results.isEmpty else { throw TouchCodeTransportError.connectionFailed }
         return try results.removeFirst().get()
+    }
+
+    func disconnect() async { disconnectCount += 1 }
+}
+
+private final class DelayedTransport: TouchCodeTransport {
+    let states: AsyncStream<TransportState> = AsyncStream { $0.finish() }
+    private var continuation: CheckedContinuation<TouchCodeHello, Error>?
+    private(set) var connectStarted = false
+
+    func connect(to endpoint: TouchCodeEndpoint) async throws -> TouchCodeHello {
+        connectStarted = true
+        return try await withCheckedThrowingContinuation { continuation in
+            self.continuation = continuation
+        }
+    }
+
+    func resolveOld(with hello: TouchCodeHello) {
+        continuation?.resume(returning: hello)
+        continuation = nil
     }
 
     func disconnect() async {}

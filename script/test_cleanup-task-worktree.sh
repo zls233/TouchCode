@@ -27,6 +27,10 @@ git -C "$repo" push -q origin main
 worktree="$fixture/worktree"
 git -C "$repo" worktree add -q "$worktree" task/fixture
 worktree="$(cd "$worktree" && pwd -P)"
+wrong="$fixture/wrong-worktree"
+git -C "$repo" branch -q task/other main
+git -C "$repo" worktree add -q "$wrong" task/other
+wrong="$(cd "$wrong" && pwd -P)"
 
 bin="$fixture/bin"
 mkdir "$bin"
@@ -35,6 +39,13 @@ cat > "$bin/gh" <<'EOF'
 printf 'MERGED\t2026-09-01T00:00:00Z\tmain\n'
 EOF
 chmod +x "$bin/gh"
+if (cd "$repo" && PATH="$bin:$PATH" "$script_dir/cleanup-task-worktree.sh" task/fixture "$wrong") >/dev/null 2>&1; then
+  echo "mismatch fixture unexpectedly succeeded" >&2
+  exit 1
+fi
+test -e "$wrong/file"
+test -d "$worktree"
+git -C "$repo" worktree remove "$wrong" >/dev/null
 (cd "$repo" && PATH="$bin:$PATH" "$script_dir/cleanup-task-worktree.sh" task/fixture "$worktree") \
   >/dev/null
 ! git -C "$repo" show-ref --verify --quiet refs/heads/task/fixture

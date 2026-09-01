@@ -27,6 +27,11 @@ if ! git worktree list --porcelain | grep -Fqx "worktree $worktree_path"; then
   echo "Not a registered Git worktree: $worktree_path" >&2
   exit 1
 fi
+actual_branch="$(git -C "$worktree_path" symbolic-ref --quiet --short HEAD || true)"
+if [[ "$actual_branch" != "$branch" ]]; then
+  echo "Worktree checks out '$actual_branch', expected '$branch'; refusing cleanup." >&2
+  exit 1
+fi
 
 pr_status="$(gh pr view "$branch" --json state,mergedAt,baseRefName --jq '[.state, .mergedAt, .baseRefName] | @tsv' 2>/dev/null || true)"
 if [[ -z "$pr_status" ]]; then
