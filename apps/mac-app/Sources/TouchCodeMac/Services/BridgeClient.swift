@@ -7,6 +7,20 @@ struct BridgeHealth: Decodable, Equatable {
     let version: String
 }
 
+struct TrustedPeer: Decodable, Equatable, Identifiable {
+    let relationshipId: String
+    let peerDeviceId: String
+    let displayName: String
+    let firstPairedAt: Int64
+    let lastSeenAt: Int64
+
+    var id: String { peerDeviceId }
+}
+
+private struct TrustedPeersResponse: Decodable {
+    let peers: [TrustedPeer]
+}
+
 struct DemoSession: Decodable, Equatable {
     let sessionId: String
     let projectId: String?
@@ -77,6 +91,27 @@ struct BridgeClient {
             throw URLError(.badServerResponse)
         }
         return try JSONDecoder().decode(DemoSession.self, from: data)
+    }
+
+    func trustedPeers() async throws -> [TrustedPeer] {
+        let url = endpoint
+            .appending(path: "v1")
+            .appending(path: "device-trust")
+            .appending(path: "peers")
+        return try await get(url, as: TrustedPeersResponse.self).peers
+    }
+
+    func forgetTrustedPeer(deviceId: String) async throws {
+        let url = endpoint
+            .appending(path: "v1")
+            .appending(path: "device-trust")
+            .appending(path: "peers")
+            .appending(path: deviceId)
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.timeoutInterval = 3
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response, data: data, expectedStatus: 204)
     }
 
     func demoSession(_ sessionId: String) async throws -> DemoSession {
