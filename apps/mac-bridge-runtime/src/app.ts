@@ -5,6 +5,7 @@ import {
   acceptedVisualRunRequestSchema,
   deviceIdentityCapability,
   deviceIdentitySchema,
+  deviceTrustChallengeRequestSchema,
   pairSessionRequestSchema,
   touchCodeProtocolVersion,
   type AnnotationCapture,
@@ -16,6 +17,11 @@ import { CodingAgentRegistry } from "./coding-agents/provider.js";
 import { DemoRunManager } from "./demo-run-manager.js";
 import { DemoSessionManager, SessionLifecycleError } from "./demo-session-manager.js";
 import { ProjectGrantStore } from "./project-grants.js";
+import {
+  HostChallengeError,
+  HostChallengeManager,
+} from "./host-challenge-manager.js";
+import type { HostIdentitySigner } from "./host-identity-signer.js";
 
 export type BridgeAppOptions = {
   grants?: ProjectGrantStore;
@@ -24,6 +30,8 @@ export type BridgeAppOptions = {
   demoSessions?: DemoSessionManager;
   demoRuns?: DemoRunManager;
   hostIdentity?: DeviceIdentity;
+  hostIdentitySigner?: HostIdentitySigner;
+  hostChallengeManager?: HostChallengeManager;
 };
 
 function isLoopback(address: string) {
@@ -68,6 +76,14 @@ export async function createBridgeApp(options: BridgeAppOptions = {}) {
   const sessions = options.demoSessions
     ?? new DemoSessionManager(grants, options.bridgeBaseURL ?? "http://127.0.0.1:4317");
   const runs = options.demoRuns ?? new DemoRunManager();
+  const hostChallenges = options.hostChallengeManager
+    ?? (hostIdentity && options.hostIdentitySigner
+      ? new HostChallengeManager({
+          identity: hostIdentity,
+          signer: options.hostIdentitySigner,
+          bridgeURL: options.bridgeBaseURL ?? "http://127.0.0.1:4317",
+        })
+      : undefined);
 
   app.get("/health", async () => ({
     status: "ok",
@@ -88,6 +104,32 @@ export async function createBridgeApp(options: BridgeAppOptions = {}) {
       bridgeURL: options.bridgeBaseURL ?? "http://127.0.0.1:4317",
       ...(hostIdentity ? { identity: hostIdentity } : {}),
     };
+  });
+
+  app.post("/v1/device-trust/challenges", async (request, reply) => {
+    if (!hostChallenges) {
+      return reply.code(503).send({ error: "identity_proof_unavailable" });
+    }
+    const parsed = deviceTrustChallengeRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: "invalid_device_trust_challenge", details: parsed.error.issues });
+    }
+    try {
+      return reply.code(201).send(await hostChallenges.issue(parsed.data));
+    } catch (error) {
+      if (error instanceof HostChallengeError) {
+        if (error.code === "host_identity_mismatch") {
+          return reply.code(409).send({ error: error.code });
+        }
+        if (error.code === "reconnect_not_available") {
+          return reply.code(501).send({ error: error.code });
+        }
+        if (error.code === "challenge_capacity_reached") {
+          return reply.code(503).send({ error: error.code });
+        }
+      }
+      return reply.code(503).send({ error: "identity_signing_failed" });
+    }
   });
 
   // Kept only so the paused Mac GUI can still launch its bundled demo.

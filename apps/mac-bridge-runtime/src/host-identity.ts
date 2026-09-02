@@ -4,6 +4,7 @@ import {
 } from "@touchcode/protocol";
 
 export const hostIdentityEnvironmentKey = "TOUCHCODE_HOST_IDENTITY_JSON";
+export const identityHelperPathEnvironmentKey = "TOUCHCODE_IDENTITY_HELPER_PATH";
 export const maximumHostIdentityEnvironmentBytes = 4_096;
 
 export function hostIdentityFromEnvironment(
@@ -37,4 +38,12 @@ export function consumeHostIdentityFromEnvironment(
   } finally {
     delete environment[hostIdentityEnvironmentKey];
   }
+}
+
+export function consumeIdentityHelperPathFromEnvironment(
+  environment: NodeJS.ProcessEnv = process.env,
+): string | undefined {
+  const value = environment[identityHelperPathEnvironmentKey];
+  delete environment[identityHelperPathEnvironmentKey];
+  return value;
 }

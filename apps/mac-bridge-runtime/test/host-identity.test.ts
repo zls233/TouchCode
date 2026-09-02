@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   consumeHostIdentityFromEnvironment,
+  consumeIdentityHelperPathFromEnvironment,
   hostIdentityEnvironmentKey,
   hostIdentityFromEnvironment,
+  identityHelperPathEnvironmentKey,
   maximumHostIdentityEnvironmentBytes,
 } from "../src/host-identity.js";
 
@@ -62,4 +64,8 @@ test("entrypoint handoff is removed before Bridge launches child processes", () 
   const invalidEnvironment = { [hostIdentityEnvironmentKey]: "{" };
   assert.throws(() => consumeHostIdentityFromEnvironment(invalidEnvironment), /not valid JSON/);
   assert.equal(hostIdentityEnvironmentKey in invalidEnvironment, false);
+
+  const helperEnvironment = { [identityHelperPathEnvironmentKey]: "/absolute/helper" };
+  assert.equal(consumeIdentityHelperPathFromEnvironment(helperEnvironment), "/absolute/helper");
+  assert.equal(identityHelperPathEnvironmentKey in helperEnvironment, false);
 });

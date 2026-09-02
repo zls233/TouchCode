@@ -5,7 +5,8 @@ let package = Package(
     name: "TouchCodeMac",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "TouchCodeMac", targets: ["TouchCodeMac"])
+        .executable(name: "TouchCodeMac", targets: ["TouchCodeMac"]),
+        .executable(name: "TouchCodeIdentityHelper", targets: ["TouchCodeIdentityHelper"])
     ],
     targets: [
         .target(
@@ -16,6 +17,11 @@ let package = Package(
             name: "TouchCodeMac",
             dependencies: ["TouchCodeIdentity"],
             path: "Sources/TouchCodeMac"
+        ),
+        .executableTarget(
+            name: "TouchCodeIdentityHelper",
+            dependencies: ["TouchCodeIdentity"],
+            path: "Sources/TouchCodeIdentityHelper"
         ),
         .testTarget(
             name: "TouchCodeIdentityTests",

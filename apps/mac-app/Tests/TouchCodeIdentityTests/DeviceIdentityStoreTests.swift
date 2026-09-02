@@ -132,6 +132,18 @@ final class DeviceIdentityStoreTests: XCTestCase, @unchecked Sendable {
         XCTAssertNil(object["privateKey"])
         XCTAssertNil(object["signature"])
     }
+
+    func testIdentityHelperProtocolAcceptsCanonicalBoundedTranscripts() throws {
+        let transcript = Data("TouchCode Identity v1\0example".utf8)
+        let encoded = DeviceIdentityDerivation.base64URL(transcript)
+        XCTAssertEqual(try IdentityHelperProtocol.decodeTranscript(encoded), transcript)
+        XCTAssertThrowsError(try IdentityHelperProtocol.decodeTranscript(""))
+        XCTAssertThrowsError(try IdentityHelperProtocol.decodeTranscript("YWJj="))
+        XCTAssertThrowsError(try IdentityHelperProtocol.decodeTranscript(" YWJj"))
+        XCTAssertThrowsError(try IdentityHelperProtocol.decodeTranscript(
+            DeviceIdentityDerivation.base64URL(Data(repeating: 1, count: IdentityHelperProtocol.maximumTranscriptBytes + 1))
+        ))
+    }
 }
 
 private final class InMemoryP256KeyProvider: P256KeyProviding, @unchecked Sendable {
