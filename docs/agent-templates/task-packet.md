@@ -4,13 +4,9 @@
 
 <!-- One concrete, verifiable outcome. -->
 
-## Risk level
+## Decision constraints
 
-<!-- Level 1 Routine / Level 2 Stateful-Cross-module / Level 3 Architecture-Security -->
-
-## Architecture decision
-
-<!-- Level 3 only: frozen minimum decision and the conditions that may reopen it. -->
+<!-- Any frozen architecture/safety decision and the conditions that may reopen it. -->
 
 ## Scope
 

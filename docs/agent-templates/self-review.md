@@ -1,7 +1,7 @@
-# Worker self-review
+# Self-review
 
-Review the entire task diff with a reviewer mindset before external review.
-Try to break the implementation and update code/tests before handoff.
+Review the entire task diff before PR delivery. Try to break the implementation
+and update code/tests before handoff.
 
 ## Every task
 
@@ -13,7 +13,7 @@ Try to break the implementation and update code/tests before handoff.
 - [ ] `git diff origin/main...HEAD` contains only task-owned changes.
 - [ ] `git diff --check` passes.
 
-## Level 2 and Level 3 additions
+## Stateful and security-sensitive additions
 
 - [ ] Start, stop, retry, reconnect, and repeated invocation are coherent.
 - [ ] Delayed completions and stale callbacks cannot mutate newer state.

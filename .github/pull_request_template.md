@@ -2,8 +2,7 @@
 
 <!-- What user-visible or engineering outcome does this PR deliver? -->
 
-- Risk level: <!-- Level 1 / Level 2 / Level 3 -->
-- Task packet: <!-- Link/path -->
+- Scope/plan: <!-- Link/path or concise task scope -->
 - Implementation complete: <!-- yes/no -->
 - Self-review complete: <!-- yes/no -->
 
@@ -25,7 +24,7 @@
 
 ### Pre-merge
 
-<!-- Full checks required for this risk/scope, or "Pending Lead merge gate". -->
+<!-- Full checks required for this scope, or "Pending merge gate". -->
 
 ## API Changes
 
@@ -33,10 +32,10 @@
 
 ## Risks / unresolved issues
 
-<!-- None, or describe known risks, follow-ups, and decisions needed from Lead. -->
+<!-- None, or describe known risks, follow-ups, and decisions still needed. -->
 
-## Review handoff
+## Delivery
 
-- Reviewed branch SHA: <!-- full remote task-branch SHA -->
+- Delivery branch SHA: <!-- full remote task-branch SHA -->
 - Known remaining risks: <!-- None, or concise list -->
 - Follow-ups outside frozen scope: <!-- None, or links/descriptions -->
