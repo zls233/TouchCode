@@ -1,52 +1,21 @@
-# Task packet
+# Task packet — cancelled
 
-## Outcome
+> This template is **cancelled** and retained only for historical reference.
+> Do not create a Task Packet / Tech Packet for new tasks.
 
-<!-- One concrete, verifiable outcome. -->
+Effective workflow (see `AGENTS.md`):
 
-## Decision constraints
+- Task context is only the user's current instruction + `AGENTS.md` + `Plan.md`
+  (if present). `Plan.md` is optional.
+- Do not create, require, or gate on any packet document. Do not block
+  implementation waiting for packet approval.
+- Freeze scope from the current instruction; re-freeze explicitly if it changes.
+- Implement the minimal change that satisfies the current Acceptance Criteria.
+  No scope expansion or over-design.
+- Record out-of-scope findings only as follow-ups — never implement inline.
+- Sol is only a temporary advisor for complex problems that cannot be safely
+  decided from the available context; not a default reviewer or required gate.
 
-<!-- Any frozen architecture/safety decision and the conditions that may reopen it. -->
-
-## Scope
-
-Allowed:
-
-- <!-- Files/modules/behaviors that may change. -->
-
-Do not touch:
-
-- <!-- Explicit boundaries and unrelated work. -->
-
-## Relevant files
-
-- <!-- Implementation, interfaces, tests, config, approved plan. -->
-
-## Invariants
-
-1. <!-- Property that must remain true. -->
-
-## Known edge cases
-
-- <!-- Failure, lifecycle, race, compatibility, or input edge. -->
-
-## Acceptance criteria
-
-- [ ] <!-- Observable completion condition. -->
-
-## Validation
-
-During development:
-
-- <!-- Targeted tests/typecheck. -->
-
-Before review:
-
-- <!-- Targeted plus affected-package checks. -->
-
-Before merge:
-
-- <!-- Full repository/native/integration checks justified by scope. -->
-
-For async or stateful work, use deterministic controllable fakes for important
-transitions instead of immediate no-op mocks.
+For validation, use the three tiers defined in `AGENTS.md` and
+`docs/task-worktree-workflow.md` (targeted → affected-package → full pre-merge)
+without requiring a packet.
