@@ -27,6 +27,11 @@ let package = Package(
             name: "TouchCodeIdentityTests",
             dependencies: ["TouchCodeIdentity"],
             path: "Tests/TouchCodeIdentityTests"
+        ),
+        .testTarget(
+            name: "TouchCodeMacTests",
+            dependencies: ["TouchCodeMac"],
+            path: "Tests/TouchCodeMacTests"
         )
     ]
 )
