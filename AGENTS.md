@@ -20,28 +20,48 @@ validation, one complete self-review, and one PR.
 
 1. Inspect the branch, diff, and current baseline once; preserve all user
    changes.
-2. Confirm and freeze the explicit task scope.
+2. Confirm and freeze the explicit task scope directly from the user's current
+   instruction (plus `AGENTS.md` / `Plan.md` if provided).
 3. Read the relevant implementation, interfaces, tests, configuration, and
-   approved plan in one batch.
-4. Complete one bounded, verifiable development slice and self-review it.
+   `Plan.md` (if present) in one batch. Do not require or create a Task Packet.
+4. Complete one bounded, verifiable development slice with the minimal
+   implementation that satisfies the current Acceptance Criteria and self-review
+   it. Do not expand scope or over-design.
 5. Run targeted checks during implementation, affected-package checks before
    PR delivery, and full validation only at the pre-merge gate when justified.
 6. Evaluate the acceptance result, regression risk, unverified paths, and next
-   slice without repeating completed investigation or validation.
+   slice without repeating completed investigation or validation. Record
+   out-of-scope items only as follow-ups.
 
 Perform one concentrated investigation at task start: status/fetch, the
-necessary source and tests, and the relevant plan. Do not repeatedly poll Git,
-GitHub, or reread files unless implementation reveals genuinely new
-information.
+necessary source and tests, and the relevant plan (`Plan.md` if present). Do
+not repeatedly poll Git, GitHub, or reread files unless implementation reveals
+genuinely new information.
 
-### Task packet
+### Task packet — cancelled
 
-For a complex task, create one packet containing: Outcome, Allowed Scope, Do
-Not Touch, Relevant Files, Invariants, Known Edge Cases, Acceptance Criteria,
-and validation tiers. Use
-[`docs/agent-templates/task-packet.md`](docs/agent-templates/task-packet.md).
-Routine tasks may keep this contract concise in the task prompt. If scope
-changes after implementation starts, explicitly re-freeze it.
+Task Packet / Tech Packet and any related mandatory packet documents are
+cancelled. Do not create them, do not require them as a gate, and do not block
+implementation waiting for them. The only task context is: the user's current
+instruction + `AGENTS.md` + `Plan.md` (if present). `Plan.md` is optional
+reference material, not a required deliverable.
+
+### Scope and minimal implementation
+
+- Freeze scope directly from the user's current instruction (plus `AGENTS.md` /
+  `Plan.md` if provided). If scope changes mid-task, re-freeze explicitly.
+- Always implement the minimal change that satisfies the current Acceptance
+  Criteria. No opportunistic refactoring, no scope expansion, no over-design.
+- Out-of-scope findings, improvement ideas, or unrelated risks are recorded
+  only as follow-ups — never implemented inline.
+
+### Advisor (Sol) — temporary only
+
+Sol is not a default reviewer or required gate. Engage Sol only as a temporary
+advisor when the current task encounters a complex problem that cannot be safely
+decided with the available context (user instruction + `AGENTS.md` + `Plan.md`
++ code/tests). Keep the consultation narrow, time-boxed, and focused on the
+specific decision; do not hand off ownership.
 
 ## Development documentation
 

@@ -6,11 +6,16 @@ targeted tests, one self-review, and one PR.
 
 ## Start gate
 
-Confirm the scope before creating a worktree. Read the Git baseline, approved
-plan, relevant implementation, interfaces, tests, and configuration in one
-batch. Complex tasks can use
-[`agent-templates/task-packet.md`](agent-templates/task-packet.md) to record
-invariants and validation tiers. After implementation starts, scope is frozen.
+Confirm and freeze scope directly from the user's current instruction (plus
+`AGENTS.md` / `Plan.md` if present) before creating a worktree. Read the Git
+baseline, `Plan.md` (if present), relevant implementation, interfaces, tests,
+and configuration in one batch. Do not create or require a Task Packet / Tech
+Packet; that workflow is cancelled. After implementation starts, scope is
+frozen — if it changes, re-freeze explicitly. Always prefer the minimal
+implementation that satisfies the current Acceptance Criteria; record
+out-of-scope findings only as follow-ups and do not expand scope inline. Sol is
+only a temporary advisor for complex decisions that cannot be safely made from
+the available context.
 
 ## Quick start
 
