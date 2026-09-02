@@ -17,26 +17,28 @@ final class HMRAndGestureTests: XCTestCase {
         XCTAssertNil(Int("550e8400-e29b-41d4-a716-446655440000"), "UUID must be treated as non-integer and fall back")
     }
 
-    // MARK: - Voice gesture thresholds (matches PreviewWebView.TwoFingerVoiceGestureRecognizer)
+    // MARK: - Voice gesture thresholds (matches PreviewWebView.TwoFingerVoiceGestureRecognizer - Plan §2.2 §3.2)
     func testGestureThresholds() {
-        XCTAssertEqual(TwoFingerGesturePolicy.activationDelay, .milliseconds(450))
-        XCTAssertEqual(TwoFingerGesturePolicy.activationMoveLimit, 18, accuracy: 0.01)
-        XCTAssertEqual(TwoFingerGesturePolicy.activationSpreadLimit, 0.12, accuracy: 0.001)
-        XCTAssertEqual(TwoFingerGesturePolicy.actionTranslationLimit, 72, accuracy: 0.01)
+        XCTAssertEqual(TwoFingerGesturePolicy.activationDelay, .milliseconds(420))
+        XCTAssertEqual(TwoFingerGesturePolicy.activationMoveLimit, 12, accuracy: 0.01)
+        XCTAssertEqual(TwoFingerGesturePolicy.activationSpreadLimit, 0.03, accuracy: 0.001)
+        XCTAssertEqual(TwoFingerGesturePolicy.actionTranslationLimit, 44, accuracy: 0.01)
 
         XCTAssertEqual(TwoFingerGesturePolicy.decision(for: 80), .send)
         XCTAssertEqual(TwoFingerGesturePolicy.decision(for: -80), .cancel)
         XCTAssertEqual(TwoFingerGesturePolicy.decision(for: 10), .neutral)
-        XCTAssertEqual(TwoFingerGesturePolicy.decision(for: 72), .send)
-        XCTAssertEqual(TwoFingerGesturePolicy.decision(for: -72), .cancel)
+        XCTAssertEqual(TwoFingerGesturePolicy.decision(for: 44), .send)
+        XCTAssertEqual(TwoFingerGesturePolicy.decision(for: -44), .cancel)
+        XCTAssertEqual(TwoFingerGesturePolicy.decision(for: 43), .neutral)
+        XCTAssertEqual(TwoFingerGesturePolicy.decision(for: -43), .neutral)
     }
 
     func testGestureStateTransitions() {
-        // Simulates state machine: possible -> began after 450ms, then changed/ended, or failed if moved/spread early.
+        // Simulates state machine: possible -> began after 420ms, then changed/ended, or failed if moved/spread early.
         enum State { case possible, began, changed, failed, ended }
-        XCTAssertTrue(TwoFingerGesturePolicy.cancelsPendingActivation(moved: 20, spread: 0.05))
-        XCTAssertTrue(TwoFingerGesturePolicy.cancelsPendingActivation(moved: 5, spread: 0.2))
-        XCTAssertFalse(TwoFingerGesturePolicy.cancelsPendingActivation(moved: 5, spread: 0.05))
+        XCTAssertTrue(TwoFingerGesturePolicy.cancelsPendingActivation(moved: 13, spread: 0.01))
+        XCTAssertTrue(TwoFingerGesturePolicy.cancelsPendingActivation(moved: 5, spread: 0.04))
+        XCTAssertFalse(TwoFingerGesturePolicy.cancelsPendingActivation(moved: 5, spread: 0.02))
         // A pre-activation horizontal swipe is not allowed to become voice.
         XCTAssertTrue(TwoFingerGesturePolicy.cancelsPendingActivation(moved: 80, spread: 0))
     }
