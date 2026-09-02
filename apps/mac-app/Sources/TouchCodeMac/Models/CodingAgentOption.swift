@@ -41,5 +41,13 @@ enum SidebarDestination: String, CaseIterable, Identifiable {
         case .diagnostics: "stethoscope"
         }
     }
-}
 
+    var keyboardShortcut: Character {
+        switch self {
+        case .overview: "1"
+        case .project: "2"
+        case .codingAgent: "3"
+        case .diagnostics: "4"
+        }
+    }
+}

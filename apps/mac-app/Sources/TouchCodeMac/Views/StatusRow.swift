@@ -15,7 +15,7 @@ struct StatusRow: View {
                 Text(model.detail)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
             }
             Spacer()
             severityBadge
@@ -24,6 +24,7 @@ struct StatusRow: View {
         .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 8))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(model.title): \(model.detail)")
+        .accessibilityValue(model.severity.accessibilityLabel)
     }
 
     private var colorForSeverity: Color {
@@ -43,7 +44,9 @@ struct StatusRow: View {
             case .active:
                 Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
             case .waiting:
-                ProgressView().controlSize(.small)
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityHidden(true)
             case .warning:
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
             case .error:

@@ -35,6 +35,8 @@ struct OverviewView: View {
                             Text(workspace.projectPath)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
+                                .truncationMode(.middle)
+                                .help(workspace.projectPath)
                             Spacer()
                             Button(workspace.demoSession?.status == "running" ? "Session Running" : "Start Session") {
                                 Task { await workspace.startDemo() }
@@ -58,7 +60,10 @@ struct OverviewView: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                 Text(session.bridgeURL)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
                                     .textSelection(.enabled)
+                                    .help(session.bridgeURL)
                             }
                         }
                         LabeledContent("Preview", value: session.previewURL)
@@ -90,6 +95,8 @@ struct OverviewView: View {
                             Text("Changed: \(run.changedFiles.joined(separator: ", "))")
                                 .font(.caption.monospaced())
                                 .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                                .truncationMode(.middle)
                         }
                         if run.isReviewable {
                             HStack {

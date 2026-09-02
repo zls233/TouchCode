@@ -54,6 +54,9 @@ private struct TrustedDevicesSettingsView: View {
                                 .accessibilityHidden(true)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(peer.displayName)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                    .help(peer.displayName)
                                 Text("Last connected \(lastSeenText(for: peer))")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)

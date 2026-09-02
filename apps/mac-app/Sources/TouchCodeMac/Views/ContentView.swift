@@ -13,6 +13,7 @@ struct ContentView: View {
             }
             .listStyle(.sidebar)
             .navigationTitle("TouchCode")
+            .navigationSplitViewColumnWidth(min: 170, ideal: 190, max: 240)
         } detail: {
             switch workspace.selection ?? .overview {
             case .overview:
