@@ -25,8 +25,13 @@ struct ProjectView: View {
             } else {
                 Section("Project") {
                     LabeledContent("Name", value: (workspace.projectPath as NSString).lastPathComponent)
-                    LabeledContent("Location", value: workspace.projectPath)
-                        .textSelection(.enabled)
+                    LabeledContent("Location") {
+                        Text(workspace.projectPath)
+                            .lineLimit(2)
+                            .truncationMode(.middle)
+                            .textSelection(.enabled)
+                            .help(workspace.projectPath)
+                    }
                     LabeledContent("Git", value: "main · Clean")
                     LabeledContent("Workspace", value: "Ready")
                 }
@@ -51,7 +56,11 @@ struct ProjectView: View {
             if let run = workspace.latestRun {
                 Section("Latest change") {
                     LabeledContent("Status", value: run.message)
-                    LabeledContent("Files", value: run.changedFiles.joined(separator: ", "))
+                    LabeledContent("Files") {
+                        Text(run.changedFiles.joined(separator: ", "))
+                            .lineLimit(2)
+                            .truncationMode(.middle)
+                    }
                     if run.diff.isEmpty {
                         ContentUnavailableView(
                             "No source diff",

@@ -8,7 +8,13 @@ struct DiagnosticsView: View {
             Section("Connection") {
                 LabeledContent("Bridge", value: bridgeStatusText)
                 LabeledContent("iPad", value: workspace.ipadConnected ? "Connected" : "Not connected")
-                LabeledContent("Endpoint", value: workspace.bridgeEndpoint)
+                LabeledContent("Endpoint") {
+                    Text(workspace.bridgeEndpoint)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .textSelection(.enabled)
+                        .help(workspace.bridgeEndpoint)
+                }
             }
             Section("Discovery") {
                 LabeledContent("Status", value: "Bonjour _touchcode._tcp")
@@ -20,13 +26,25 @@ struct DiagnosticsView: View {
                 LabeledContent("Status", value: bridgeStatusText)
                 if let session = workspace.demoSession {
                     LabeledContent("Session", value: session.sessionId.prefix(8).description)
-                    LabeledContent("Preview", value: session.previewURL)
+                    LabeledContent("Preview") {
+                        Text(session.previewURL)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .textSelection(.enabled)
+                            .help(session.previewURL)
+                    }
                 } else {
                     ContentUnavailableView("No active session", systemImage: "dot.radiowaves.left.and.right", description: Text("Start a session from Overview."))
                 }
             }
             Section("Project") {
-                LabeledContent("Path", value: workspace.projectPath)
+                LabeledContent("Path") {
+                    Text(workspace.projectPath)
+                        .lineLimit(2)
+                        .truncationMode(.middle)
+                        .textSelection(.enabled)
+                        .help(workspace.projectPath)
+                }
                 LabeledContent("Git", value: "Available on device")
             }
             Section("Coding Agent") {

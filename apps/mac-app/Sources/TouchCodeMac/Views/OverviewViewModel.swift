@@ -99,5 +99,16 @@ struct StatusRowModel: Identifiable, Equatable {
 
     enum Severity {
         case normal, active, waiting, warning, error, unavailable
+
+        var accessibilityLabel: String {
+            switch self {
+            case .normal: "Normal"
+            case .active: "Connected"
+            case .waiting: "In progress"
+            case .warning: "Attention needed"
+            case .error: "Error"
+            case .unavailable: "Unavailable"
+            }
+        }
     }
 }

@@ -7,7 +7,17 @@ struct TouchCodeMacApp: App {
     var body: some Scene {
         WindowGroup("TouchCode") {
             ContentView(workspace: workspace)
-                .frame(minWidth: 900, minHeight: 560)
+                .frame(minWidth: 720, minHeight: 480)
+        }
+        .commands {
+            CommandMenu("Navigate") {
+                ForEach(SidebarDestination.allCases) { destination in
+                    Button(destination.title) {
+                        workspace.selection = destination
+                    }
+                    .keyboardShortcut(KeyEquivalent(destination.keyboardShortcut), modifiers: .command)
+                }
+            }
         }
 
         Settings {
@@ -15,4 +25,3 @@ struct TouchCodeMacApp: App {
         }
     }
 }
-
