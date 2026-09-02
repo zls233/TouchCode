@@ -136,6 +136,88 @@ final class TouchCodeNetworkingTests: XCTestCase {
         session.stop()
     }
 
+    func testValidateHelloAndEnvelopeBytesRejectOversize() throws {
+        let okHello = Data(repeating: 0, count: TransportFrameLimits.maxHelloBytes)
+        XCTAssertNoThrow(try validateHelloBytes(okHello))
+        let largeHello = Data(repeating: 0, count: TransportFrameLimits.maxHelloBytes + 1)
+        XCTAssertThrowsError(try validateHelloBytes(largeHello))
+        let okEnvelope = Data(repeating: 0, count: TransportFrameLimits.maxEnvelopeBytes)
+        XCTAssertNoThrow(try validateEnvelopeBytes(okEnvelope))
+        let largeEnvelope = Data(repeating: 0, count: TransportFrameLimits.maxEnvelopeBytes + 1)
+        XCTAssertThrowsError(try validateEnvelopeBytes(largeEnvelope))
+    }
+
+    func testValidateEnvelopeRejectsUnsupportedVersionAndLargePayload() throws {
+        let ok = TouchCodeEnvelope(version: 1, id: UUID(), kind: "hello", payload: .string("hi"), sentAt: nil)
+        XCTAssertNoThrow(try validateEnvelope(ok))
+        let badVersion = TouchCodeEnvelope(version: 2, id: UUID(), kind: "hello", payload: nil, sentAt: nil)
+        XCTAssertThrowsError(try validateEnvelope(badVersion))
+    }
+
+    func testNextReconnectDelayExponentialCapped() {
+        XCTAssertEqual(nextReconnectDelay(attempt: 0), 0.5, accuracy: 0.001)
+        XCTAssertEqual(nextReconnectDelay(attempt: 1), 1.0, accuracy: 0.001)
+        XCTAssertEqual(nextReconnectDelay(attempt: 6), 30.0, accuracy: 0.001)
+        XCTAssertEqual(nextReconnectDelay(attempt: 10), 30.0, accuracy: 0.001)
+    }
+
+    @MainActor
+    func testHeartbeatTimeoutTriggersAutoReconnect() async {
+        let discovery = FakeHostDiscovery()
+        let heartbeat = FakeHeartbeatMonitor()
+        let strategy = ReconnectStrategy(nextDelay: { _ in 0.02 })
+        let transport = FakeTransport(results: [.success(Self.hello), .success(Self.hello)])
+        let session = TouchCodeSession(discovery: discovery, transport: transport, heartbeatMonitor: heartbeat, reconnectStrategy: strategy)
+        await session.findMac()
+        discovery.send(.hosts([Self.host("mac")]))
+        await eventually { session.state == .connected("mac") }
+        XCTAssertEqual(heartbeat.startCount, 1)
+        heartbeat.setTimedOut(true)
+        heartbeat.triggerTick()
+        await eventually(timeout: .seconds(2)) { session.state == .reconnecting || session.state == .discovering }
+        XCTAssertEqual(heartbeat.stopCount, 1)
+        await eventually(timeout: .seconds(2)) { session.state == .discovering }
+        await eventually(timeout: .seconds(2)) { discovery.startCount == 2 }
+        session.stop()
+    }
+
+    @MainActor
+    func testAppForegroundTriggersReconnectWhenTimedOut() async {
+        let discovery = FakeHostDiscovery()
+        let heartbeat = FakeHeartbeatMonitor()
+        let strategy = ReconnectStrategy(nextDelay: { _ in 0.02 })
+        let transport = FakeTransport(results: [.success(Self.hello)])
+        let session = TouchCodeSession(discovery: discovery, transport: transport, heartbeatMonitor: heartbeat, reconnectStrategy: strategy)
+        await session.findMac()
+        discovery.send(.hosts([Self.host("mac")]))
+        await eventually { session.state == .connected("mac") }
+        heartbeat.setTimedOut(true)
+        session.handleForeground()
+        await eventually(timeout: .seconds(2)) { session.state == .reconnecting || session.state == .discovering }
+        await eventually(timeout: .seconds(2)) { session.state == .discovering }
+        session.stop()
+    }
+
+    @MainActor
+    func testStopCancelsReconnectAndHeartbeat() async {
+        let discovery = FakeHostDiscovery()
+        let heartbeat = FakeHeartbeatMonitor()
+        let reconnect = ControllableReconnect()
+        let transport = FakeTransport(results: [.success(Self.hello)], blockDisconnect: false)
+        let session = TouchCodeSession(discovery: discovery, transport: transport, heartbeatMonitor: heartbeat, reconnectStrategy: reconnect.strategy)
+        await session.findMac()
+        discovery.send(.hosts([Self.host("mac")]))
+        await eventually { session.state == .connected("mac") }
+        heartbeat.setTimedOut(true)
+        heartbeat.triggerTick()
+        await eventually { session.state == .reconnecting }
+        session.stop()
+        XCTAssertEqual(session.state, .idle)
+        reconnect.release()
+        try? await Task.sleep(for: .milliseconds(30))
+        XCTAssertEqual(session.state, .idle)
+    }
+
     private static let hello = TouchCodeHello(
         protocolVersion: 1, role: "host", platform: "macOS", appVersion: "0.1.0",
         capabilities: [], bridgeURL: "http://192.0.2.10:4317"
@@ -235,4 +317,15 @@ private final class DelayedTransport: TouchCodeTransport {
     }
 
     func disconnect() async {}
+}
+
+private final class ControllableReconnect {
+    var strategy: ReconnectStrategy!
+    private var continuation: CheckedContinuation<Void, Never>?
+    init() {
+        strategy = ReconnectStrategy(nextDelay: { _ in 0.05 }, sleep: { [weak self] _ in
+            await withCheckedContinuation { c in self?.continuation = c }
+        })
+    }
+    func release() { continuation?.resume(); continuation = nil }
 }

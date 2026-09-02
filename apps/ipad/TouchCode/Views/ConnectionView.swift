@@ -127,7 +127,7 @@ struct ConnectionView: View {
 
     private var isSearching: Bool {
         switch touchCodeSession.state {
-        case .discovering, .connecting: true
+        case .discovering, .connecting, .reconnecting: true
         default: false
         }
     }
@@ -148,6 +148,7 @@ struct ConnectionView: View {
         case .connected(let name): "Connected to \(name)"
         case .unavailable: "Mac unavailable"
         case .permissionRequired: "Local Network access required"
+        case .reconnecting: "Reconnecting…"
         }
     }
 
@@ -155,7 +156,7 @@ struct ConnectionView: View {
         switch touchCodeSession.state {
         case .idle:
             "TouchCode uses your local network to find the Mac running your workspace."
-        case .discovering, .connecting:
+        case .discovering, .connecting, .reconnecting:
             "Keep TouchCode running on your Mac and make sure both devices are nearby."
         case .connected:
             "Your Mac is ready. Pair once to open its workspace."

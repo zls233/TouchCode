@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export * from "./device-identity.js";
+export * from "./transport.js";
 import { deviceIdentitySchema } from "./device-identity.js";
 
 export const touchCodeProtocolVersion = 1 as const;
