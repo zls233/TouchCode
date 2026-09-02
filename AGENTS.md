@@ -42,13 +42,50 @@ remaining risks. Luna implements and independently validates that plan.
 
 ## Development loop
 
-1. Inspect the branch, diff, and current baseline; preserve all user changes.
-2. Let Luna complete one bounded, verifiable development slice.
-3. Escalate through a task packet only when the routing criteria apply.
-4. Run the smallest relevant checks, then broader checks when the slice crosses
-   package or app boundaries.
-5. Evaluate: acceptance result, regression risk, unverified paths, and the
-   next highest-priority slice. Continue the next cycle without repeating work.
+Use this default target: one investigation, one complete task packet, one
+implementation pass, one Worker self-review, one independent review, and at
+most one consolidated fix pass. More loops require a specific reason.
+
+1. Inspect the branch, diff, and current baseline once; preserve all user
+   changes.
+2. Classify the task risk and freeze its scope.
+3. Read the relevant implementation, interfaces, tests, configuration, and
+   approved plan in one batch, then write a complete task packet.
+4. Let Luna complete one bounded, verifiable development slice and self-review
+   it before external review.
+5. Escalate through a task packet only when the routing criteria apply.
+6. Run targeted checks during implementation, affected-package checks before
+   review, and full validation only at the pre-merge gate.
+7. Evaluate the acceptance result, regression risk, unverified paths, and next
+   slice without repeating completed investigation or validation.
+
+### Risk levels
+
+- **Level 1 — Routine:** single-file bugs, small UI/config/copy changes, direct
+  compiler errors, tests, and simple refactors. Use Luna, targeted tests, and a
+  lightweight diff review. Do not use Sol or an exhaustive state matrix.
+- **Level 2 — Stateful / Cross-module:** sessions, networking, async work,
+  reconnect, cache/persistence lifecycle, state machines, and multi-module
+  APIs. Lead defines invariants; Worker performs full lifecycle self-review;
+  Reviewer performs one complete state/race review.
+- **Level 3 — Architecture / Security:** cryptography, trust boundaries,
+  protocol architecture, destructive migration, irreversible formats, and
+  cross-platform core architecture. Sol decides only the smallest necessary
+  architecture question; Lead freezes that decision before Luna implements.
+
+The Lead performs one concentrated investigation at task start: status/fetch,
+the necessary source and tests, and the relevant plan. Do not repeatedly poll
+Git, GitHub, or reread files unless implementation reveals genuinely new
+information.
+
+### Task packet
+
+Every modifying task starts from a single packet containing: Outcome, risk
+level, Allowed Scope, Do Not Touch, Relevant Files, Invariants, Known Edge
+Cases, Acceptance Criteria, and the three validation tiers. Use
+[`docs/agent-templates/task-packet.md`](docs/agent-templates/task-packet.md).
+If the packet changes after implementation starts, the Lead must explicitly
+re-freeze scope.
 
 ## Development documentation
 
@@ -109,16 +146,24 @@ configuration does.
    worktree. Keep the task's file ownership narrow. If tasks overlap heavily,
    serialize them. If they have an API or architecture dependency, the Lead
    must settle the shared contract before workers start implementation.
-4. Keep commits atomic and use conventional commits:
+4. Treat the accepted task packet as a scope freeze. Record unrelated findings
+   as follow-ups unless they directly block acceptance. Keep commits atomic
+   and use conventional commits:
    `<type>(<scope>): <short description>`.
-5. Run the smallest relevant checks, then broader checks required by
-   [`install_guide.md`](install_guide.md) when the task crosses package/app
-   boundaries. Record commands and results; do not equate a build with a
-   complete device or end-to-end validation.
-6. Self-review `git diff origin/main...HEAD` and `git diff --check`. Do not
-   expand the task into a broad refactor or public API change. Escalate such a
-   need to the Lead and record it in the PR instead.
-7. Push only the task branch, set its upstream, and create a PR targeting
+5. Use three validation tiers: targeted tests/typecheck in the inner loop;
+   targeted plus affected-package tests before review; full repository,
+   Xcode, or integration validation only before merge when relevant. Follow
+   [`install_guide.md`](install_guide.md) and record exact commands/results.
+6. Before independent review, self-review the complete
+   `git diff origin/main...HEAD` using
+   [`docs/agent-templates/worker-self-review.md`](docs/agent-templates/worker-self-review.md).
+   For Level 2 work, cover happy/failure paths, start/stop/retry/reconnect,
+   reentrancy, stale callbacks/generations, ownership, cleanup, and deterministic
+   tests. Async lifecycle tests should prefer controllable fakes with explicit
+   enter/pause/resume/fail/complete control over immediate no-op mocks.
+7. Run `git diff --check`, then report `Implementation complete`, `Self-review
+   complete`, tests run, and known remaining risks. Only then request review.
+8. Push only the task branch, set its upstream, and create a PR targeting
    `main`. The PR is the standard Worker delivery. Never push directly to
    `main`, force-push, rebase interactively, merge a PR, or rewrite history.
 
@@ -128,10 +173,34 @@ unresolved issues.
 
 ### Review and integration
 
-Review Agents check acceptance criteria, bugs, regressions, race conditions,
-lifecycle behavior, scope creep, API changes, test coverage, and unnecessary
-refactors. They do not modify the Worker branch unless the Lead explicitly
-assigns a follow-up implementation task.
+Review intensity follows the risk level: Level 1 gets a lightweight diff
+review, Level 2 gets a full state/lifecycle review, and Level 3 gets a
+security/architecture review against the frozen decision. Review Agents read
+the complete diff and related state machine/tests, build the edge-case list,
+and return all high-confidence findings together. They do not stop after the
+first issue unless it is a fatal architecture error.
+
+Classify correctness, data loss, realistic races, security, regressions, and
+broken workflow as `Blocking`. Classify cleanup, future optimization, better
+abstraction, unrelated refactors, and purely hypothetical edges as
+`Follow-up`; follow-ups do not block the PR. Preserve the standard output
+sections `Blockers`, `Important issues`, and `Minor issues`, and label
+non-blocking findings as follow-ups. Use
+[`docs/agent-templates/reviewer-prompt.md`](docs/agent-templates/reviewer-prompt.md).
+Review Agents remain read-only unless the Lead assigns a separate fix task.
+
+Normal review is one exhaustive pass followed by zero or one consolidated fix
+pass and one verification review. If the same module receives three
+`REQUEST CHANGES` decisions, stop incremental patching: the Lead must redefine
+the missing invariants, reassess the whole implementation, and use Sol only if
+the repeated failure meets the escalation criteria.
+
+During implementation, the remote task branch is the source of truth. Check
+the remote/reviewed SHA once before review and the PR-head/approved SHA once at
+the merge gate. Do not poll `gh pr view`, PR refs, checks, or worktree state
+between gates. On GitHub EOF, timeout, or ref delay, confirm the branch push and
+continue local work until the next gate; never create empty commits or force
+push to provoke synchronization.
 
 The Lead merges approved PRs using **Squash and merge**, so `main` contains one
 clean commit describing the final task outcome rather than temporary Worker
@@ -146,3 +215,21 @@ the local cleanup after that verification.
 remain external-state changes. They require explicit user or Lead integration
 authorization. Never reset, overwrite, delete, publish, purchase, or call paid
 external providers without that authorization.
+
+### Baselines, migrations, and status reporting
+
+If `origin/main` lacks a required local baseline, either submit one verified
+baseline PR first or pause feature work for one Baseline Stabilization task.
+Do not interleave both contexts. A one-time historical migration PR may contain
+multiple existing atomic commits and may use a merge commit, but its body must
+state `PR type: migration` and `Exception: one-time`.
+
+Check worktree state only after creation, at Worker delivery, and before
+cleanup unless a real conflict appears. Progress updates should be limited to
+blockers, Worker start/completion, material review findings, PR readiness, and
+merge completion. Report phases precisely as prerequisite complete,
+implementation started/completed, review completed, merged, or validated.
+
+Normal targets are one task branch/worktree/PR, one Worker implementation pass,
+no more than two independent review rounds, no more than two full repository
+validation runs, and zero or one Sol decision.
