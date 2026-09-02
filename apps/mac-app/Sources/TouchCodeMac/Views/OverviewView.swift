@@ -1,48 +1,46 @@
 import SwiftUI
+import AppKit
 
 struct OverviewView: View {
     @ObservedObject var workspace: WorkspaceStore
+    @StateObject private var viewModel = OverviewViewModel()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Bridge your iPad to your coding agent")
-                    .font(.largeTitle.weight(.semibold))
-                Text("TouchCode transports visual context and user intent. Codex or another selected coding agent performs the code change.")
-                    .foregroundStyle(.secondary)
-            }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(viewModel.presentationState.title)
+                        .font(.title2.weight(.semibold))
+                    Text(viewModel.presentationState.message)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
 
-            HStack(spacing: 16) {
-                StatusCard(
-                    title: "Mac Bridge",
-                    value: bridgeStatusText,
-                    systemImage: "arrow.trianglehead.2.clockwise.rotate.90"
-                )
-                StatusCard(
-                    title: "iPad",
-                    value: workspace.ipadConnected ? "Connected" : "Waiting",
-                    systemImage: "ipad"
-                )
-                StatusCard(
-                    title: "Coding Agent",
-                    value: workspace.selectedCodingAgent.title,
-                    systemImage: "terminal"
-                )
-            }
+                ForEach(viewModel.statusRows) { row in
+                    StatusRow(model: row)
+                }
 
-            GroupBox("Current project") {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "folder")
-                        Text(workspace.projectPath)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                        Spacer()
-                        Button(workspace.demoSession?.status == "running" ? "Session Running" : "Start Session") {
-                            Task { await workspace.startDemo() }
-                        }
-                        .disabled(workspace.demoSession?.status == "running")
+                if let actionTitle = viewModel.presentationState.primaryActionTitle {
+                    Button(actionTitle) {
+                        Task { await handlePrimaryAction() }
                     }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                }
+
+                GroupBox("Current project") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "folder")
+                            Text(workspace.projectPath)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                            Spacer()
+                            Button(workspace.demoSession?.status == "running" ? "Session Running" : "Start Session") {
+                                Task { await workspace.startDemo() }
+                            }
+                            .disabled(workspace.demoSession?.status == "running")
+                        }
                     if let session = workspace.demoSession {
                         HStack(alignment: .firstTextBaseline) {
                             VStack(alignment: .leading, spacing: 4) {
@@ -122,44 +120,33 @@ struct OverviewView: View {
             }
 
             Spacer()
+            }
+            .padding(28)
+            .task { viewModel.update(from: workspace) }
+            .onChange(of: workspace.bridgeStatus) { _, _ in viewModel.update(from: workspace) }
+            .onChange(of: workspace.demoSession?.sessionId) { _, _ in viewModel.update(from: workspace) }
+            .onChange(of: workspace.ipadConnected) { _, _ in viewModel.update(from: workspace) }
+            .onChange(of: workspace.projectPath) { _, _ in viewModel.update(from: workspace) }
+            .onChange(of: workspace.selectedCodingAgent) { _, _ in viewModel.update(from: workspace) }
         }
-        .padding(28)
+    }
+
+    private func handlePrimaryAction() async {
+        switch viewModel.presentationState {
+        case .permissionRequired:
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy") {
+                NSWorkspace.shared.open(url)
+            }
+        case .waiting, .unavailable:
+            await workspace.refreshBridgeStatus()
+        default:
+            break
+        }
     }
 
     private func runIcon(_ run: CodingRunSnapshot) -> String {
         if run.status == "failed" { return "exclamationmark.triangle.fill" }
         if run.isActive { return "hourglass" }
         return "checkmark.circle.fill"
-    }
-
-    private var bridgeStatusText: String {
-        switch workspace.bridgeStatus {
-        case .checking: "Checking…"
-        case .connected(let version): "Connected · \(version)"
-        case .disconnected: "Not running"
-        }
-    }
-}
-
-private struct StatusCard: View {
-    let title: String
-    let value: String
-    let systemImage: String
-
-    var body: some View {
-        GroupBox {
-            HStack(spacing: 12) {
-                Image(systemName: systemImage)
-                    .font(.title2)
-                    .foregroundStyle(.tint)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title).font(.headline)
-                    Text(value).foregroundStyle(.secondary)
-                }
-                Spacer()
-            }
-            .padding(8)
-            .frame(maxWidth: .infinity)
-        }
     }
 }
