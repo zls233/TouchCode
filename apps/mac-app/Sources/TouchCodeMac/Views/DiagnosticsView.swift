@@ -48,12 +48,21 @@ struct DiagnosticsView: View {
         .formStyle(.grouped)
         .navigationTitle("Diagnostics")
         .toolbar {
-            ToolbarItem {
+            ToolbarItemGroup {
                 Button("Copy Diagnostics") {
                     let text = diagnosticsText
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(text, forType: .string)
                 }
+                Button("Reconnect") {
+                    Task { await workspace.refreshBridgeStatus() }
+                }
+                .help("Refresh bridge connection")
+                Button("Restart Bridge") {
+                    workspace.bridgeProcess.start()
+                    Task { await workspace.refreshBridgeStatus() }
+                }
+                .help("Restart local bridge process")
             }
         }
     }
