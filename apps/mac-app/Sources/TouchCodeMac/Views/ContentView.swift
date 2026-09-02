@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var workspace: WorkspaceStore
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @State private var showOnboarding = false
 
     var body: some View {
         NavigationSplitView {
@@ -28,6 +30,23 @@ struct ContentView: View {
         }
         .task(id: workspace.demoSession?.sessionId) {
             await workspace.monitorDemoSession()
+        }
+        .onAppear {
+            if !hasSeenOnboarding && workspace.projectPath == "No project selected" {
+                showOnboarding = true
+            }
+        }
+        .sheet(isPresented: $showOnboarding) {
+            OnboardingView(workspace: workspace, isPresented: $showOnboarding)
+                .onDisappear { hasSeenOnboarding = true }
+        }
+        .toolbar {
+            ToolbarItem {
+                Button("Onboarding", systemImage: "questionmark.circle") {
+                    showOnboarding = true
+                }
+                .help("Show onboarding")
+            }
         }
     }
 }
