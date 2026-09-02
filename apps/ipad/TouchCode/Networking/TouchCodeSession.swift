@@ -20,6 +20,7 @@ final class TouchCodeSession: ObservableObject {
     private let transport: TouchCodeTransport
     private let heartbeatMonitor: HeartbeatMonitoring
     private let reconnectStrategy: ReconnectStrategy
+    private let lastTrustedStore: LastTrustedStore
     private var discoveryTask: Task<Void, Never>?
     private var transportStateTask: Task<Void, Never>?
     private var heartbeatTask: Task<Void, Never>?
@@ -29,17 +30,23 @@ final class TouchCodeSession: ObservableObject {
     private var generation = 0
     private var connectingHostID: String?
     private var selectedHostID: String?
+    @Published private(set) var transportStateDescription: String = "idle"
+    @Published private(set) var heartbeatDescription: String = "idle"
+    var generationForDiagnostics: Int { generation }
+    var selectedHostIDForDiagnostics: String? { selectedHostID }
 
     init(
         discovery: HostDiscovery? = nil,
         transport: TouchCodeTransport? = nil,
         heartbeatMonitor: HeartbeatMonitoring? = nil,
-        reconnectStrategy: ReconnectStrategy? = nil
+        reconnectStrategy: ReconnectStrategy? = nil,
+        lastTrustedStore: LastTrustedStore? = nil
     ) {
         self.discovery = discovery ?? BonjourHostDiscovery()
         self.transport = transport ?? PrototypeHTTPTransport()
         self.heartbeatMonitor = heartbeatMonitor ?? HeartbeatMonitor()
         self.reconnectStrategy = reconnectStrategy ?? ReconnectStrategy()
+        self.lastTrustedStore = lastTrustedStore ?? LastTrustedStore()
     }
 
     func findMac() async {
@@ -90,6 +97,8 @@ final class TouchCodeSession: ObservableObject {
         selectedHostID = nil
         bridgeURL = nil
         state = .idle
+        transportStateDescription = "idle"
+        heartbeatDescription = "idle"
     }
 
     func handleForeground() {
@@ -138,12 +147,14 @@ final class TouchCodeSession: ObservableObject {
 
     private func connect(to hosts: [DiscoveredHost], generation: Int) async {
         await waitForDisconnectTail()
-        for host in hosts {
+        let ordered = orderedHosts(from: hosts)
+        for host in ordered {
             guard generation == self.generation else { return }
             guard discoveredHosts.contains(where: { $0.id == host.id }),
                   selectedHostID == nil else { break }
             connectingHostID = host.id
             state = .connecting(host.name)
+            transportStateDescription = "connecting"
             do {
                 let hello = try await transport.connect(to: host.endpoint)
                 guard generation == self.generation else { return }
@@ -153,20 +164,36 @@ final class TouchCodeSession: ObservableObject {
                 try validateHelloBytes(Data(hello.bridgeURL.utf8))
                 bridgeURL = url
                 selectedHostID = host.id
+                lastTrustedStore.save(hostID: host.id)
                 state = .connected(host.name)
+                transportStateDescription = "connected"
+                heartbeatDescription = "ready"
                 connectingHostID = nil
                 reconnectStrategy.reset()
                 startHeartbeat(generation: generation)
                 return
             } catch {
                 connectingHostID = nil
+                transportStateDescription = "failed"
             }
         }
         connectingHostID = nil
         if selectedHostID == nil {
             state = .unavailable
+            transportStateDescription = "unavailable"
             scheduleAutoReconnect()
         }
+    }
+
+    private func orderedHosts(from hosts: [DiscoveredHost]) -> [DiscoveredHost] {
+        // Priority: last trusted > others sorted by name
+        guard let last = lastTrustedStore.load(),
+              let trusted = hosts.first(where: { $0.id == last }) else {
+            return hosts
+        }
+        var rest = hosts.filter { $0.id != last }
+        // Keep original order for rest (already sorted by name in discovery)
+        return [trusted] + rest
     }
 
     private func observeTransport(generation: Int) {
@@ -175,6 +202,7 @@ final class TouchCodeSession: ObservableObject {
             guard let self else { return }
             for await tState in self.transport.states {
                 guard generation == self.generation else { return }
+                await MainActor.run { self.transportStateDescription = "\(tState)" }
                 if tState == .failed {
                     await self.scheduleAutoReconnect()
                 }
@@ -185,11 +213,13 @@ final class TouchCodeSession: ObservableObject {
     private func startHeartbeat(generation: Int) {
         heartbeatTask?.cancel()
         heartbeatMonitor.start()
+        heartbeatDescription = "running"
         heartbeatTask = Task { [weak self] in
             guard let self else { return }
             for await _ in self.heartbeatMonitor.ticks {
                 guard generation == self.generation else { return }
                 if self.heartbeatMonitor.heartbeatTimedOut() {
+                    await MainActor.run { self.heartbeatDescription = "timeout" }
                     await self.scheduleAutoReconnect()
                     return
                 }
@@ -201,6 +231,7 @@ final class TouchCodeSession: ObservableObject {
         heartbeatTask?.cancel()
         heartbeatTask = nil
         heartbeatMonitor.stop()
+        heartbeatDescription = "stopped"
     }
 
     private func scheduleAutoReconnect() {

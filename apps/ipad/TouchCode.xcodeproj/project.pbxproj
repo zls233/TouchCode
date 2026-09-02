@@ -45,6 +45,13 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>A30000000000000000000007</key>
+		<dict>
+			<key>fileRef</key>
+			<string>B30000000000000000000007</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>A30000000000000000000004</key>
 		<dict>
 			<key>fileRef</key>
@@ -104,6 +111,17 @@
 			<string>sourcecode.swift</string>
 			<key>path</key>
 			<string>SessionChannels.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B30000000000000000000007</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>LastTrustedStore.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
@@ -171,6 +189,13 @@
 		<dict>
 			<key>fileRef</key>
 			<string>B10000000000000000000008</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>A1000000000000000000000D</key>
+		<dict>
+			<key>fileRef</key>
+			<string>B1000000000000000000000D</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -262,6 +287,17 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>B1000000000000000000000D</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>DiagnosticsView.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>B10000000000000000000009</key>
 		<dict>
 			<key>isa</key>
@@ -308,6 +344,7 @@
 				<string>A30000000000000000000003</string>
 				<string>A30000000000000000000005</string>
 				<string>A30000000000000000000006</string>
+				<string>A30000000000000000000007</string>
 				<string>A10000000000000000000001</string>
 				<string>A10000000000000000000002</string>
 				<string>A10000000000000000000003</string>
@@ -316,6 +353,7 @@
 				<string>A10000000000000000000006</string>
 				<string>A10000000000000000000007</string>
 				<string>A10000000000000000000008</string>
+				<string>A1000000000000000000000D</string>
 				<string>A10000000000000000000009</string>
 				<string>A1000000000000000000000A</string>
 				<string>A500000000000000000000002</string>
@@ -408,6 +446,7 @@
 				<string>B30000000000000000000003</string>
 				<string>B30000000000000000000005</string>
 				<string>B30000000000000000000006</string>
+				<string>B30000000000000000000007</string>
 			</array>
 			<key>isa</key>
 			<string>PBXGroup</string>
@@ -449,6 +488,7 @@
 			<array>
 				<string>B10000000000000000000007</string>
 				<string>B10000000000000000000008</string>
+				<string>B1000000000000000000000D</string>
 			</array>
 			<key>isa</key>
 			<string>PBXGroup</string>

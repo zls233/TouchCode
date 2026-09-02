@@ -255,6 +255,38 @@ final class TouchCodeNetworkingTests: XCTestCase {
         upstream.stop()
     }
 
+    func testLastTrustedStorePersistsAndClears() {
+        let suite = "test.lastTrusted.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        let store = LastTrustedStore(defaults: defaults)
+        XCTAssertNil(store.load())
+        store.save(hostID: "mac-123")
+        XCTAssertEqual(store.load(), "mac-123")
+        store.save(hostID: "mac-456")
+        XCTAssertEqual(store.load(), "mac-456")
+        store.clear()
+        XCTAssertNil(store.load())
+        defaults.removePersistentDomain(forName: suite)
+    }
+
+    @MainActor
+    func testAutoConnectPrioritizesLastTrustedHost() async {
+        let suite = "test.autoConnect.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        let store = LastTrustedStore(defaults: defaults, key: "testLastTrusted")
+        store.save(hostID: "second")
+        let discovery = FakeHostDiscovery()
+        let transport = FakeTransport(results: [.success(Self.hello)])
+        let session = TouchCodeSession(discovery: discovery, transport: transport, lastTrustedStore: store)
+        await session.findMac()
+        discovery.send(.hosts([Self.host("first"), Self.host("second")]))
+        await eventually { session.state == .connected("second") }
+        XCTAssertEqual(session.selectedHostIDForDiagnostics, "second")
+        XCTAssertEqual(session.transportStateDescription, "connected")
+        session.stop()
+        defaults.removePersistentDomain(forName: suite)
+    }
+
     func testChannelMultiplexerControlNotBlockedByLargeFile() async throws {
         let mux = ChannelMultiplexer()
         let filePayload = Data(repeating: 0x41, count: 200 * 1024) // 200KB -> 4 chunks
