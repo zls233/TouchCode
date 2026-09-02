@@ -1,18 +1,52 @@
 import SwiftUI
+import AppKit
 
 struct ProjectView: View {
     @ObservedObject var workspace: WorkspaceStore
 
     var body: some View {
         Form {
-            Section("Workspace") {
-                LabeledContent("Path", value: workspace.projectPath)
-                Text("TouchCode works with a local project on this Mac.")
-                    .foregroundStyle(.secondary)
-            }
-            Section("Safety") {
-                Label("Changes run in an isolated Git worktree", systemImage: "checkmark.shield")
-                Label("Keep creates a checkpoint inside the demo workspace", systemImage: "arrow.triangle.branch")
+            if workspace.projectPath == "No project selected" || workspace.projectPath.isEmpty {
+                Section {
+                    ContentUnavailableView(
+                        "No Project Selected",
+                        systemImage: "folder.badge.questionmark",
+                        description: Text("Choose the project you want to work on from your iPad.")
+                    )
+                    Button("Choose Project…") {
+                        Task { await workspace.chooseProject() }
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                Section {
+                    Text("TouchCode works with a local project on this Mac.")
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Section("Project") {
+                    LabeledContent("Name", value: (workspace.projectPath as NSString).lastPathComponent)
+                    LabeledContent("Location", value: workspace.projectPath)
+                        .textSelection(.enabled)
+                    LabeledContent("Git", value: "main · Clean")
+                    LabeledContent("Workspace", value: "Ready")
+                }
+                Section {
+                    Button("Reveal in Finder") {
+                        if let url = URL(string: "file://\(workspace.projectPath)") {
+                            NSWorkspace.shared.activateFileViewerSelecting([url])
+                        } else {
+                            NSWorkspace.shared.selectFile(workspace.projectPath, inFileViewerRootedAtPath: "")
+                        }
+                    }
+                    Button("Change Project…") {
+                        Task { await workspace.chooseProject() }
+                    }
+                }
+                Section("Safety") {
+                    Label("Isolated changes — Agent changes run separately from your primary working state.", systemImage: "checkmark.shield")
+                    Label("Review before keeping — You can review generated changes before applying them.", systemImage: "eye")
+                    Label("Checkpoints — TouchCode can preserve recoverable states during a session.", systemImage: "arrow.triangle.branch")
+                }
             }
             if let run = workspace.latestRun {
                 Section("Latest change") {
