@@ -255,6 +255,51 @@ final class TouchCodeNetworkingTests: XCTestCase {
         upstream.stop()
     }
 
+    func testChannelMultiplexerControlNotBlockedByLargeFile() async throws {
+        let mux = ChannelMultiplexer()
+        let filePayload = Data(repeating: 0x41, count: 200 * 1024) // 200KB -> 4 chunks
+        let fileMessage = SessionMessage(id: UUID(), channel: .file, payload: filePayload, sentAt: Date())
+        let controlMessage = SessionMessage(id: UUID(), channel: .control, payload: Data("ping".utf8), sentAt: Date())
+
+        // Start file send in background
+        let fileTask = Task { try await mux.send(fileMessage) }
+        // Give file task a moment to start chunking
+        try? await Task.sleep(for: .milliseconds(2))
+        let controlStart = Date()
+        try await mux.send(controlMessage)
+        let controlElapsed = Date().timeIntervalSince(controlStart)
+        // Control should be delivered quickly, not blocked by file's 20ms total
+        XCTAssertLessThan(controlElapsed, 0.05)
+
+        // Verify control was delivered via its channel
+        let controlChannel = mux.channel(for: .control)
+        var receivedControl: SessionMessage?
+        let timeout = ContinuousClock.now + .milliseconds(100)
+        while receivedControl == nil && ContinuousClock.now < timeout {
+            for await msg in controlChannel.messages {
+                if msg.id == controlMessage.id { receivedControl = msg; break }
+                break
+            }
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        // At least the send didn't throw and elapsed was quick; actual delivery via channel is async
+        // We verify that file was chunked and control not blocked by checking file task completes
+        try await fileTask.value
+        XCTAssertEqual(receivedControl?.payload, controlMessage.payload)
+    }
+
+    func testChannelMultiplexerRejectsOversizePayload() async {
+        let mux = ChannelMultiplexer()
+        let large = Data(repeating: 0, count: TransportFrameLimits.maxPayloadBytes + 1)
+        let msg = SessionMessage(id: UUID(), channel: .file, payload: large, sentAt: Date())
+        do {
+            try await mux.send(msg)
+            XCTFail("should have thrown payloadTooLarge")
+        } catch {
+            XCTAssertEqual(error as? TransportFrameError, TransportFrameError.payloadTooLarge)
+        }
+    }
+
     private static let hello = TouchCodeHello(
         protocolVersion: 1, role: "host", platform: "macOS", appVersion: "0.1.0",
         capabilities: [], bridgeURL: "http://192.0.2.10:4317"

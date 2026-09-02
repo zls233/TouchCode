@@ -38,6 +38,13 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>A30000000000000000000006</key>
+		<dict>
+			<key>fileRef</key>
+			<string>B30000000000000000000006</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>A30000000000000000000004</key>
 		<dict>
 			<key>fileRef</key>
@@ -86,6 +93,17 @@
 			<string>sourcecode.swift</string>
 			<key>path</key>
 			<string>TouchCodeLocalGateway.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B30000000000000000000006</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>SessionChannels.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
@@ -289,6 +307,7 @@
 				<string>A30000000000000000000002</string>
 				<string>A30000000000000000000003</string>
 				<string>A30000000000000000000005</string>
+				<string>A30000000000000000000006</string>
 				<string>A10000000000000000000001</string>
 				<string>A10000000000000000000002</string>
 				<string>A10000000000000000000003</string>
@@ -388,6 +407,7 @@
 				<string>B30000000000000000000002</string>
 				<string>B30000000000000000000003</string>
 				<string>B30000000000000000000005</string>
+				<string>B30000000000000000000006</string>
 			</array>
 			<key>isa</key>
 			<string>PBXGroup</string>
