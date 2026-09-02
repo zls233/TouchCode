@@ -7,7 +7,21 @@ public enum BridgeIdentityEnvironmentError: Error, Equatable, Sendable {
 
 public enum BridgeIdentityEnvironment {
     public static let variableName = "TOUCHCODE_HOST_IDENTITY_JSON"
+    public static let helperPathVariableName = "TOUCHCODE_IDENTITY_HELPER_PATH"
+    public static let helperExecutableName = "TouchCodeIdentityHelper"
     public static let maximumValueBytes = 4_096
+
+    public static func helperExecutableURL(bundle: Bundle = .main) -> URL? {
+        if bundle.bundleURL.pathExtension == "app" {
+            return bundle.bundleURL
+                .appendingPathComponent("Contents", isDirectory: true)
+                .appendingPathComponent("Helpers", isDirectory: true)
+                .appendingPathComponent(helperExecutableName)
+        }
+        return bundle.executableURL?
+            .deletingLastPathComponent()
+            .appendingPathComponent(helperExecutableName)
+    }
 
     public static func encode(_ identity: DeviceIdentity) throws -> String {
         let encoder = JSONEncoder()

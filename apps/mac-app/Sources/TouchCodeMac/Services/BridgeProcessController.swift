@@ -38,6 +38,12 @@ final class BridgeProcessController: ObservableObject {
             let displayName = Host.current().localizedName ?? ProcessInfo.processInfo.hostName
             let identity = try identityStore.loadOrCreate(displayName: displayName)
             environment[BridgeIdentityEnvironment.variableName] = try BridgeIdentityEnvironment.encode(identity)
+            guard let helperURL = BridgeIdentityEnvironment.helperExecutableURL(),
+                  FileManager.default.isExecutableFile(atPath: helperURL.path) else {
+                state = .failed("TouchCode identity helper is unavailable")
+                return
+            }
+            environment[BridgeIdentityEnvironment.helperPathVariableName] = helperURL.path
         } catch {
             state = .failed("Device identity is unavailable: \(error)")
             return
