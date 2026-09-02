@@ -20,6 +20,9 @@ final class WorkspaceStore: ObservableObject {
     @Published var sessionError: String?
     @Published var reviewError: String?
     @Published var isReviewing = false
+    @Published private(set) var trustedPeers: [TrustedPeer] = []
+    @Published private(set) var trustedPeersError: String?
+    @Published private(set) var isLoadingTrustedPeers = false
     let bridgeProcess = BridgeProcessController()
 
     func refreshBridgeStatus() async {
@@ -128,6 +131,46 @@ final class WorkspaceStore: ObservableObject {
         panel.message = "Choose the project you want to work on from your iPad."
         if panel.runModal() == .OK, let url = panel.url {
             projectPath = url.path
+        }
+    }
+
+    func loadTrustedPeers() async {
+        guard let url = URL(string: bridgeEndpoint) else {
+            trustedPeers = []
+            trustedPeersError = "The Bridge address is invalid."
+            return
+        }
+        isLoadingTrustedPeers = true
+        trustedPeersError = nil
+        defer {
+            if !Task.isCancelled {
+                isLoadingTrustedPeers = false
+            }
+        }
+        do {
+            let peers = try await BridgeClient(endpoint: url).trustedPeers()
+            guard !Task.isCancelled else { return }
+            trustedPeers = peers
+        } catch {
+            guard !Task.isCancelled else { return }
+            trustedPeers = []
+            trustedPeersError = "Trusted devices are unavailable. Make sure TouchCode is running, then try again."
+        }
+    }
+
+    func forgetTrustedPeer(_ peer: TrustedPeer) async -> Bool {
+        guard let url = URL(string: bridgeEndpoint) else {
+            trustedPeersError = "The Bridge address is invalid."
+            return false
+        }
+        trustedPeersError = nil
+        do {
+            try await BridgeClient(endpoint: url).forgetTrustedPeer(deviceId: peer.peerDeviceId)
+            trustedPeers.removeAll { $0.peerDeviceId == peer.peerDeviceId }
+            return true
+        } catch {
+            trustedPeersError = "TouchCode could not forget this device. Try again."
+            return false
         }
     }
 }
