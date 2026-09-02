@@ -3,10 +3,13 @@ import { unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   acceptedVisualRunRequestSchema,
+  deviceIdentityCapability,
+  deviceIdentitySchema,
   pairSessionRequestSchema,
   touchCodeProtocolVersion,
   type AnnotationCapture,
   type AcceptedVisualRunRequest,
+  type DeviceIdentity,
 } from "@touchcode/protocol";
 import { CodexSdkProvider } from "./coding-agents/codex-sdk-provider.js";
 import { CodingAgentRegistry } from "./coding-agents/provider.js";
@@ -20,6 +23,7 @@ export type BridgeAppOptions = {
   bridgeBaseURL?: string;
   demoSessions?: DemoSessionManager;
   demoRuns?: DemoRunManager;
+  hostIdentity?: DeviceIdentity;
 };
 
 function isLoopback(address: string) {
@@ -53,6 +57,9 @@ function decodeJPEG(encoded: string) {
 }
 
 export async function createBridgeApp(options: BridgeAppOptions = {}) {
+  const hostIdentity = options.hostIdentity === undefined
+    ? undefined
+    : deviceIdentitySchema.parse(options.hostIdentity);
   // 12 MiB of JPEG data expands to roughly 16 MiB when encoded as JSON/base64.
   const app = Fastify({ logger: false, bodyLimit: 17 * 1024 * 1024 });
   const grants = options.grants ?? new ProjectGrantStore();
@@ -69,14 +76,19 @@ export async function createBridgeApp(options: BridgeAppOptions = {}) {
     version: "0.1.0",
   }));
 
-  app.get("/v1/hello", async () => ({
-    protocolVersion: touchCodeProtocolVersion,
-    role: "host" as const,
-    platform: "macOS" as const,
-    appVersion: "0.1.0",
-    capabilities: ["pairing", "workspace", "preview", "codex"],
-    bridgeURL: options.bridgeBaseURL ?? "http://127.0.0.1:4317",
-  }));
+  app.get("/v1/hello", async () => {
+    const capabilities = ["pairing", "workspace", "preview", "codex"];
+    if (hostIdentity) capabilities.push(deviceIdentityCapability);
+    return {
+      protocolVersion: touchCodeProtocolVersion,
+      role: "host" as const,
+      platform: "macOS" as const,
+      appVersion: "0.1.0",
+      capabilities,
+      bridgeURL: options.bridgeBaseURL ?? "http://127.0.0.1:4317",
+      ...(hostIdentity ? { identity: hostIdentity } : {}),
+    };
+  });
 
   // Kept only so the paused Mac GUI can still launch its bundled demo.
   app.post("/v1/demo-sessions", async (request, reply) => {

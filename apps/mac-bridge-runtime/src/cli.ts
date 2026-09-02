@@ -6,6 +6,7 @@ import { ProjectGrantStore } from "./project-grants.js";
 import { prepareWorkspace, removeFailedWorkspace, startPreview } from "./project-workspace.js";
 import { access } from "node:fs/promises";
 import { BonjourRegistration } from "./bonjour-registration.js";
+import { consumeHostIdentityFromEnvironment } from "./host-identity.js";
 
 async function main() {
   const options = parseCliOptions(process.argv.slice(2));
@@ -20,6 +21,7 @@ async function main() {
 
   const hostAddress = localIPv4Address();
   const bridgeURL = `http://${hostAddress}:${options.bridgePort}`;
+  const hostIdentity = consumeHostIdentityFromEnvironment();
   const grants = new ProjectGrantStore();
   const sessions = new DemoSessionManager(grants, bridgeURL);
   let workspace: Awaited<ReturnType<typeof prepareWorkspace>> | undefined;
@@ -65,6 +67,7 @@ async function main() {
       grants,
       bridgeBaseURL: bridgeURL,
       demoSessions: sessions,
+      ...(hostIdentity ? { hostIdentity } : {}),
     });
     await app.listen({ host: "0.0.0.0", port: options.bridgePort });
     bonjour = new BonjourRegistration(options.bridgePort);

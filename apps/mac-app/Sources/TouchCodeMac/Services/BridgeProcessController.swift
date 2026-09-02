@@ -1,4 +1,5 @@
 import Foundation
+import TouchCodeIdentity
 
 @MainActor
 final class BridgeProcessController: ObservableObject {
@@ -10,8 +11,13 @@ final class BridgeProcessController: ObservableObject {
     }
 
     @Published private(set) var state: State = .stopped
+    private let identityStore: DeviceIdentityStore
     private var process: Process?
     private var outputPipe: Pipe?
+
+    init(identityStore: DeviceIdentityStore = DeviceIdentityStore()) {
+        self.identityStore = identityStore
+    }
 
     func start() {
         guard process == nil else { return }
@@ -28,6 +34,14 @@ final class BridgeProcessController: ObservableObject {
         var environment = ProcessInfo.processInfo.environment
         let toolDirectory = URL(fileURLWithPath: pnpm).deletingLastPathComponent().path
         environment["PATH"] = "\(toolDirectory):\(environment["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin")"
+        do {
+            let displayName = Host.current().localizedName ?? ProcessInfo.processInfo.hostName
+            let identity = try identityStore.loadOrCreate(displayName: displayName)
+            environment[BridgeIdentityEnvironment.variableName] = try BridgeIdentityEnvironment.encode(identity)
+        } catch {
+            state = .failed("Device identity is unavailable: \(error)")
+            return
+        }
         child.environment = environment
         let pipe = Pipe()
         child.standardOutput = pipe
