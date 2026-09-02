@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+export * from "./device-identity.js";
+import { deviceIdentitySchema } from "./device-identity.js";
+
 export const touchCodeProtocolVersion = 1 as const;
 
 export const touchCodeHelloSchema = z.object({
@@ -9,6 +12,7 @@ export const touchCodeHelloSchema = z.object({
   appVersion: z.string().min(1),
   capabilities: z.array(z.string().min(1)),
   bridgeURL: z.string().url(),
+  identity: deviceIdentitySchema.optional(),
 });
 
 export const pointSchema = z.object({
