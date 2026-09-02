@@ -9,6 +9,7 @@ final class TouchCodeSession: ObservableObject {
         case connected(String)
         case unavailable
         case permissionRequired
+        case reconnecting
     }
 
     @Published private(set) var state: State = .idle
@@ -17,7 +18,12 @@ final class TouchCodeSession: ObservableObject {
 
     private let discovery: HostDiscovery
     private let transport: TouchCodeTransport
+    private let heartbeatMonitor: HeartbeatMonitoring
+    private let reconnectStrategy: ReconnectStrategy
     private var discoveryTask: Task<Void, Never>?
+    private var transportStateTask: Task<Void, Never>?
+    private var heartbeatTask: Task<Void, Never>?
+    private var reconnectTask: Task<Void, Never>?
     private var disconnectTail: Task<Void, Never>?
     private var disconnectSequence = 0
     private var generation = 0
@@ -26,10 +32,14 @@ final class TouchCodeSession: ObservableObject {
 
     init(
         discovery: HostDiscovery? = nil,
-        transport: TouchCodeTransport? = nil
+        transport: TouchCodeTransport? = nil,
+        heartbeatMonitor: HeartbeatMonitoring? = nil,
+        reconnectStrategy: ReconnectStrategy? = nil
     ) {
         self.discovery = discovery ?? BonjourHostDiscovery()
         self.transport = transport ?? PrototypeHTTPTransport()
+        self.heartbeatMonitor = heartbeatMonitor ?? HeartbeatMonitor()
+        self.reconnectStrategy = reconnectStrategy ?? ReconnectStrategy()
     }
 
     func findMac() async {
@@ -43,6 +53,7 @@ final class TouchCodeSession: ObservableObject {
         do {
             try await discovery.start()
             guard sessionGeneration == generation else { return }
+            observeTransport(generation: sessionGeneration)
             discoveryTask = Task { [weak self] in
                 guard let self else { return }
                 for await event in self.discovery.events {
@@ -64,13 +75,31 @@ final class TouchCodeSession: ObservableObject {
         generation += 1
         discoveryTask?.cancel()
         discoveryTask = nil
+        transportStateTask?.cancel()
+        transportStateTask = nil
+        heartbeatTask?.cancel()
+        heartbeatTask = nil
+        reconnectTask?.cancel()
+        reconnectTask = nil
         discovery.stop()
+        heartbeatMonitor.stop()
+        reconnectStrategy.reset()
         enqueueDisconnect()
         discoveredHosts = []
         connectingHostID = nil
         selectedHostID = nil
         bridgeURL = nil
         state = .idle
+    }
+
+    func handleForeground() {
+        guard case .unavailable = state else {
+            if heartbeatMonitor.heartbeatTimedOut() {
+                scheduleAutoReconnect()
+            }
+            return
+        }
+        scheduleAutoReconnect()
     }
 
     private func received(_ event: HostDiscoveryEvent, generation: Int) async {
@@ -121,17 +150,98 @@ final class TouchCodeSession: ObservableObject {
                 guard let url = TouchCodeAPIClient.validatedBridgeURL(from: hello.bridgeURL) else {
                     throw TouchCodeTransportError.invalidResponse
                 }
+                try validateHelloBytes(Data(hello.bridgeURL.utf8))
                 bridgeURL = url
                 selectedHostID = host.id
                 state = .connected(host.name)
                 connectingHostID = nil
+                reconnectStrategy.reset()
+                startHeartbeat(generation: generation)
                 return
             } catch {
                 connectingHostID = nil
             }
         }
         connectingHostID = nil
-        if selectedHostID == nil { state = .unavailable }
+        if selectedHostID == nil {
+            state = .unavailable
+            scheduleAutoReconnect()
+        }
+    }
+
+    private func observeTransport(generation: Int) {
+        transportStateTask?.cancel()
+        transportStateTask = Task { [weak self] in
+            guard let self else { return }
+            for await tState in self.transport.states {
+                guard generation == self.generation else { return }
+                if tState == .failed {
+                    await self.scheduleAutoReconnect()
+                }
+            }
+        }
+    }
+
+    private func startHeartbeat(generation: Int) {
+        heartbeatTask?.cancel()
+        heartbeatMonitor.start()
+        heartbeatTask = Task { [weak self] in
+            guard let self else { return }
+            for await _ in self.heartbeatMonitor.ticks {
+                guard generation == self.generation else { return }
+                if self.heartbeatMonitor.heartbeatTimedOut() {
+                    await self.scheduleAutoReconnect()
+                    return
+                }
+            }
+        }
+    }
+
+    private func stopHeartbeat() {
+        heartbeatTask?.cancel()
+        heartbeatTask = nil
+        heartbeatMonitor.stop()
+    }
+
+    private func scheduleAutoReconnect() {
+        guard reconnectTask == nil else { return }
+        stopHeartbeat()
+        enqueueDisconnect()
+        let baseGeneration = generation
+        state = .reconnecting
+        reconnectTask = Task { [weak self] in
+            guard let self else { return }
+            await self.reconnectStrategy.waitForNextAttempt()
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                guard baseGeneration == self.generation else { return }
+                self.reconnectTask = nil
+                self.discoveryTask?.cancel()
+                self.discoveryTask = nil
+                self.discovery.stop()
+                self.generation += 1
+                let nextGen = self.generation
+                self.state = .discovering
+                Task { await self.restartDiscovery(generation: nextGen) }
+            }
+        }
+    }
+
+    private func restartDiscovery(generation: Int) async {
+        do {
+            try await discovery.start()
+            guard generation == self.generation else { return }
+            observeTransport(generation: generation)
+            discoveryTask = Task { [weak self] in
+                guard let self else { return }
+                for await event in self.discovery.events {
+                    if Task.isCancelled { return }
+                    await self.received(event, generation: generation)
+                }
+            }
+        } catch {
+            if generation == self.generation { state = .permissionRequired }
+        }
     }
 
     private func waitForDisconnectTail() async {
