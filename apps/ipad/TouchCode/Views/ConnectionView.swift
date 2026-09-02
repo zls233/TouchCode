@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ConnectionView: View {
     @StateObject private var touchCodeSession = TouchCodeSession()
+    @Environment(\.scenePhase) private var scenePhase
     @State private var bridgeAddress: String = {
         UserDefaults.standard.string(forKey: "bridgeAddress") ?? "http://127.0.0.1:4317"
     }()
@@ -11,6 +12,7 @@ struct ConnectionView: View {
     @State private var isPairing = false
     @State private var errorMessage: String?
     @State private var manualConnectionPresented = false
+    @State private var diagnosticsPresented = false
 
     var body: some View {
         Group {
@@ -23,7 +25,24 @@ struct ConnectionView: View {
                 connectionContent
             }
         }
+        .onAppear {
+            // Phase 6: auto-connect last trusted Mac without user tap
+            if touchCodeSession.state == .idle {
+                Task { await touchCodeSession.findMac() }
+            }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                touchCodeSession.handleForeground()
+            }
+        }
         .onDisappear { touchCodeSession.stop() }
+        .sheet(isPresented: $diagnosticsPresented) {
+            NavigationStack {
+                DiagnosticsView(session: touchCodeSession, gatewayURL: nil, previewURL: pairedSession?.previewURL)
+                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { diagnosticsPresented = false } } }
+            }
+        }
     }
 
     private var connectionContent: some View {
@@ -44,6 +63,9 @@ struct ConnectionView: View {
                     pairingControls
                 } else {
                     discoveryControls
+                    if touchCodeSession.discoveredHosts.count > 1 {
+                        multiMacSwitcher
+                    }
                 }
 
                 DisclosureGroup("Connect manually", isExpanded: $manualConnectionPresented) {
@@ -54,6 +76,10 @@ struct ConnectionView: View {
                 if let errorMessage {
                     Text(errorMessage).foregroundStyle(.red)
                 }
+
+                Button("Diagnostics") { diagnosticsPresented = true }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             .padding(40)
         }
@@ -78,6 +104,36 @@ struct ConnectionView: View {
 
             if isSearching { ProgressView().controlSize(.small) }
         }
+    }
+
+    private var multiMacSwitcher: some View {
+        VStack(spacing: 8) {
+            Text("My Macs")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            ForEach(touchCodeSession.discoveredHosts, id: \.id) { host in
+                Button {
+                    Task {
+                        // Selecting a host triggers direct connect via session's ordered priority;
+                        // For Phase 6a we simply retry and let lastTrustedStore prioritize,
+                        // but we also allow explicit selection by saving to store.
+                        UserDefaults.standard.set(host.id, forKey: "com.touchcode.lastTrustedHostID")
+                        await touchCodeSession.retry()
+                    }
+                } label: {
+                    HStack {
+                        Text(host.name)
+                        Spacer()
+                        if touchCodeSession.selectedHostIDForDiagnostics == host.id {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+        }
+        .frame(maxWidth: 440)
     }
 
     private var pairingControls: some View {
@@ -147,7 +203,7 @@ struct ConnectionView: View {
         case .connecting(let name): "Connecting to \(name)…"
         case .connected(let name): "Connected to \(name)"
         case .unavailable: "Mac unavailable"
-        case .permissionRequired: "Local Network access required"
+        case .permissionRequired: "Enable Local Network Access"
         case .reconnecting: "Reconnecting…"
         }
     }
@@ -155,15 +211,15 @@ struct ConnectionView: View {
     private var connectionExplanation: String {
         switch touchCodeSession.state {
         case .idle:
-            "TouchCode uses your local network to find the Mac running your workspace."
+            "TouchCode finds your Mac nearby — no IP or pairing code needed after first time."
         case .discovering, .connecting, .reconnecting:
-            "Keep TouchCode running on your Mac and make sure both devices are nearby."
+            "Keep TouchCode running on your Mac and make sure both devices are on the same trusted network."
         case .connected:
-            "Your Mac is ready. Pair once to open its workspace."
+            "Your Mac is ready. Pair once to open its workspace — next time it reconnects automatically."
         case .unavailable:
             "Open TouchCode on your Mac, check that both devices are on the same local network, then try again."
         case .permissionRequired:
-            "Allow Local Network access in Settings so TouchCode can find your Mac."
+            "TouchCode needs Local Network access to find your Mac automatically. Enable it in Settings → Privacy → Local Network, then tap Try Again."
         }
     }
 
