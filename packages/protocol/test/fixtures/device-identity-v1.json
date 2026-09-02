@@ -1,0 +1,18 @@
+{
+  "input": {
+    "purpose": "pair",
+    "challengeId": "ABEiM0RVZneImaq7zN3u_w",
+    "hostDeviceId": "tcid1_-s9yHQa79RESg-U5J-5mWMBi0wuM3v-kclPZExMG2v0",
+    "clientDeviceId": "tcid1_-gH-recuH-FjBUM5Awh6Gf2q5hBP_rzvFeRIbP8imF8",
+    "hostPublicKeyX963": "BMFNoWM3YHGMzbG97Zqo6wWc-PE0O6k6P719hkzzq3uJwEUYgyR9miVjotMrt-mWy1Mpi2PJ5Icu4SmpFJ7hyvk",
+    "clientPublicKeyX963": "BH4fdYIVi1X5X2Q-Z8Aahy2gWBNTjaICL9Vpl32_DzoF8xQhrAT8cPLnVeVbO7lVlTnPHWvnrOKN8-01sUY4Bfg",
+    "hostNonce": "ERERERERERERERERERERERERERERERERERERERERERE",
+    "clientNonce": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI",
+    "expiresAt": 1788314400000,
+    "bridgeURL": "http://touchcode.local:8787"
+  },
+  "transcript": "VG91Y2hDb2RlIElkZW50aXR5IHYxAAEAAAABAQAAAARwYWlyAAAAEAARIjNEVWZ3iJmqu8zd7v8AAAAxdGNpZDFfLXM5eUhRYTc5UkVTZy1VNUotNW1XTUJpMHd1TTN2LWtjbFBaRXhNRzJ2MAAAADF0Y2lkMV8tZ0gtcmVjdUgtRmpCVU01QXdoNkdmMnE1aEJQX3J6dkZlUkliUDhpbUY4AAAAIBAWwKybmyAMQOBdKzzDBQbTreY0RSaejsaYaIsgKoKeAAAAIG4KqLXa5sacMc640w68auKgKXLx0UwE5Et4EMHCX0IoAAAAIBERERERERERERERERERERERERERERERERERERERERERAAAAICIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiAAAAAAAAAAgAAAGgX9g1AAAAABtodHRwOi8vdG91Y2hjb2RlLmxvY2FsOjg3ODc",
+  "digest": "eD_sQnO1n7qsaP8BSi0w64GWJt_0lypPZKRsfGi1PT8",
+  "sas": "902913",
+  "signature": "MEQCIGaskLKnuONPND0KJLu7I6aViWdqP2bVnztTem1l9LMKAiAUkelB4q35rnImRJXIxe_ge9Pv5KepsssEZmnOTF2oxQ"
+}
