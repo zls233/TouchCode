@@ -3,7 +3,13 @@ import { mkdtemp, readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { pairedWorkspaceSessionSchema, touchCodeHelloSchema, type CodingRunRequest } from "@touchcode/protocol";
+import {
+  deviceIdentityCapability,
+  pairedWorkspaceSessionSchema,
+  touchCodeHelloSchema,
+  type CodingRunRequest,
+  type DeviceIdentity,
+} from "@touchcode/protocol";
 import { createBridgeApp } from "../src/app.js";
 import { CodingAgentRegistry, type CodingAgentProvider } from "../src/coding-agents/provider.js";
 import type { DemoSessionManager } from "../src/demo-session-manager.js";
@@ -30,7 +36,46 @@ test("negotiates the first versioned TouchCode hello without exposing workspace 
   assert.equal(hello.bridgeURL, "http://192.0.2.10:4317");
   assert.equal("workspacePath" in response.json(), false);
   assert.equal("pairingCode" in response.json(), false);
+  assert.equal(hello.identity, undefined);
+  assert.equal(hello.capabilities.includes(deviceIdentityCapability), false);
   await app.close();
+});
+
+test("advertises a validated public device identity without private material", async () => {
+  const identity: DeviceIdentity = {
+    version: 1,
+    deviceId: "tcid1_-s9yHQa79RESg-U5J-5mWMBi0wuM3v-kclPZExMG2v0",
+    keyAlgorithm: "p256",
+    signatureAlgorithm: "ecdsa-sha256",
+    signatureEncoding: "asn1-der",
+    publicKeyX963: "BMFNoWM3YHGMzbG97Zqo6wWc-PE0O6k6P719hkzzq3uJwEUYgyR9miVjotMrt-mWy1Mpi2PJ5Icu4SmpFJ7hyvk",
+    displayName: "TouchCode Mac",
+  };
+  const app = await createBridgeApp({ hostIdentity: identity });
+  const response = await app.inject({ method: "GET", url: "/v1/hello" });
+  const hello = touchCodeHelloSchema.parse(response.json());
+
+  assert.deepEqual(hello.identity, identity);
+  assert.equal(hello.capabilities.includes(deviceIdentityCapability), true);
+  assert.equal("privateKey" in response.json().identity, false);
+  assert.equal("signature" in response.json().identity, false);
+  await app.close();
+});
+
+test("rejects an unvalidated host identity supplied directly to the app", async () => {
+  await assert.rejects(
+    createBridgeApp({
+      hostIdentity: {
+        version: 1,
+        deviceId: "tcid1_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        keyAlgorithm: "p256",
+        signatureAlgorithm: "ecdsa-sha256",
+        signatureEncoding: "asn1-der",
+        publicKeyX963: "BMFNoWM3YHGMzbG97Zqo6wWc-PE0O6k6P719hkzzq3uJwEUYgyR9miVjotMrt-mWy1Mpi2PJ5Icu4SmpFJ7hyvk",
+        displayName: "TouchCode Mac",
+      },
+    }),
+  );
 });
 
 test("keeps session creation on the local Mac", async () => {

@@ -109,6 +109,29 @@ final class DeviceIdentityStoreTests: XCTestCase, @unchecked Sendable {
         XCTAssertTrue(identity.deviceId.hasPrefix("tcid1_"))
         XCTAssertEqual(provider.createCount, 2)
     }
+
+    func testBridgeEnvironmentContainsOnlyProtocolPublicIdentity() throws {
+        let identity = try DeviceIdentityStore(provider: InMemoryP256KeyProvider())
+            .loadOrCreate(displayName: "TouchCode Mac")
+        let value = try BridgeIdentityEnvironment.encode(identity)
+        let object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(value.utf8)) as? [String: Any]
+        )
+
+        XCTAssertEqual(BridgeIdentityEnvironment.variableName, "TOUCHCODE_HOST_IDENTITY_JSON")
+        XCTAssertEqual(Set(object.keys), [
+            "version",
+            "deviceId",
+            "keyAlgorithm",
+            "signatureAlgorithm",
+            "signatureEncoding",
+            "publicKeyX963",
+            "displayName",
+        ])
+        XCTAssertEqual(object["deviceId"] as? String, identity.deviceId)
+        XCTAssertNil(object["privateKey"])
+        XCTAssertNil(object["signature"])
+    }
 }
 
 private final class InMemoryP256KeyProvider: P256KeyProviding, @unchecked Sendable {
