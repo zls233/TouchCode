@@ -1,4 +1,5 @@
 import Foundation
+import Network
 import XCTest
 @testable import TouchCode
 
@@ -218,6 +219,42 @@ final class TouchCodeNetworkingTests: XCTestCase {
         XCTAssertEqual(session.state, .idle)
     }
 
+    func testLocalGatewayStartsOnLoopbackAndHidesMacIP() throws {
+        let upstream = try FakeUpstreamServer(response: "hello from mac")
+        let base = upstream.url!
+        let gateway = TouchCodeLocalGateway(forwardBaseURL: base)
+        let local = try gateway.start()
+        XCTAssertEqual(local.host, "127.0.0.1")
+        XCTAssertTrue(local.absoluteString.hasPrefix("http://127.0.0.1:"))
+        // Gateway uses distinct ephemeral port, so local URL differs from upstream even though both are loopback in test.
+        // In production, upstream would be Mac LAN IP (e.g., 192.168.x.x) and local hides it; here we verify port isolation.
+        XCTAssertNotEqual(local.port, base.port)
+        XCTAssertNotEqual(local.absoluteString, base.absoluteString)
+        gateway.stop()
+        upstream.stop()
+    }
+
+    func testLocalGatewayForwardsHTTPAndRejectsForbiddenPaths() async throws {
+        let upstream = try FakeUpstreamServer(response: "vite content")
+        let gateway = TouchCodeLocalGateway(forwardBaseURL: upstream.url!)
+        let local = try gateway.start()
+        // Valid forward
+        let validURL = local.appendingPathComponent("src/main.tsx")
+        let (validData, validResponse) = try await URLSession.shared.data(from: validURL)
+        XCTAssertEqual((validResponse as? HTTPURLResponse)?.statusCode, 200)
+        XCTAssertEqual(String(data: validData, encoding: .utf8), "vite content")
+        // Forbidden: path traversal
+        let forbiddenURL = URL(string: "http://127.0.0.1:\(local.port!)/../etc/passwd")!
+        let (_, forbiddenResponse) = try await URLSession.shared.data(from: forbiddenURL)
+        // Our gateway should return 403 for traversal (or 400), not forward to upstream
+        let forbiddenStatus = (forbiddenResponse as? HTTPURLResponse)?.statusCode ?? 0
+        XCTAssertTrue(forbiddenStatus == 403 || forbiddenStatus == 400)
+        // Gateway lifecycle follows session: stop should close
+        gateway.stop()
+        XCTAssertNil(gateway.localURL)
+        upstream.stop()
+    }
+
     private static let hello = TouchCodeHello(
         protocolVersion: 1, role: "host", platform: "macOS", appVersion: "0.1.0",
         capabilities: [], bridgeURL: "http://192.0.2.10:4317"
@@ -328,4 +365,49 @@ private final class ControllableReconnect {
         })
     }
     func release() { continuation?.resume(); continuation = nil }
+}
+
+private final class FakeUpstreamServer {
+    var url: URL!
+    private var listener: NWListener!
+    private var connections: [NWConnection] = []
+    private let queue = DispatchQueue(label: "fake-upstream")
+    init(response: String) throws {
+        let params = NWParameters.tcp
+        params.allowLocalEndpointReuse = true
+        let tempListener = try NWListener(using: params, on: 0)
+        tempListener.newConnectionHandler = { [weak self] (conn: NWConnection) in
+            self?.handle(conn: conn, response: response)
+        }
+        tempListener.start(queue: queue)
+        var port: UInt16 = 0
+        for _ in 0..<20 {
+            if let p = tempListener.port, p.rawValue != 0 { port = p.rawValue; break }
+            Thread.sleep(forTimeInterval: 0.01)
+        }
+        if port == 0 { throw NSError(domain: "FakeUpstream", code: 1) }
+        url = URL(string: "http://127.0.0.1:\(port)/")!
+        listener = tempListener
+    }
+    private func handle(conn: NWConnection, response: String) {
+        connections.append(conn)
+        conn.start(queue: queue)
+        conn.receive(minimumIncompleteLength: 1, maximumLength: 16 * 1024) { [weak self] (data: Data?, _: NWConnection.ContentContext?, _: Bool, _: NWError?) in
+            guard let self else { return }
+            // Always return 200 with fixed body regardless of request path (except we handle in gateway)
+            let body = Data(response.utf8)
+            let header = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: \(body.count)\r\nConnection: close\r\n\r\n"
+            let combined = Data(header.utf8) + body
+            conn.send(content: combined, completion: .contentProcessed { (_: NWError?) in conn.cancel() })
+            self.connections.removeAll { $0 === conn }
+            _ = data
+        }
+    }
+    func stop() {
+        listener.cancel()
+        for c in connections { c.cancel() }
+    }
+}
+extension URL {
+    var port: Int? { (self as NSURL).port?.intValue }
 }

@@ -27,12 +27,14 @@ struct WorkspaceView: View {
     @State private var connectionState: BridgeConnectionState = .connected
     @StateObject private var speechInput = SpeechInputController()
     @StateObject private var voiceOrb = VoiceOrbViewModel()
+    @State private var localGateway: TouchCodeLocalGateway?
+    @State private var localPreviewURL: URL?
     @FocusState private var composerFocused: Bool
 
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                if let previewURL = URL(string: session.previewURL) {
+                if let previewURL = effectivePreviewURL {
                     PreviewWebView(url: previewURL, controller: preview, drawing: $drawing,
                                    drawingEnabled: !isRunning && preview.viewportReady,
                                    onViewportChange: handleViewportWillChange,
@@ -90,10 +92,12 @@ struct WorkspaceView: View {
         }
         .onDisappear {
             speechInput.stop()
+            localGateway?.stop()
         }
         .task { await speechInput.prepareModel() }
         .task { voiceOrb.attach(speech: speechInput) }
         .task { await monitorSession() }
+        .task(id: session.previewURL) { await startLocalGateway() }
         .statusBarHidden(true)
         .sheet(isPresented: $settingsPresented) { settingsSheet }
         .onChange(of: preview.previewRevision) { _, revision in
@@ -111,6 +115,28 @@ struct WorkspaceView: View {
         .onChange(of: preview.viewportReady) { _, ready in
             guard ready, let frame = preview.readyFrame else { return }
             drawing = annotationDraft.drawing(for: frame.viewportKey) ?? PKDrawing()
+        }
+    }
+
+    private var effectivePreviewURL: URL? {
+        localPreviewURL ?? URL(string: session.previewURL)
+    }
+
+    private func startLocalGateway() async {
+        // Stop previous gateway before starting new one (handles previewURL changes and IP changes)
+        localGateway?.stop()
+        localPreviewURL = nil
+        guard let base = URL(string: session.previewURL), base.host != nil else { return }
+        // Only allow http/https and localhost or LAN hosts; gateway will validate further
+        let gateway = TouchCodeLocalGateway(forwardBaseURL: base, sessionToken: session.clientToken)
+        do {
+            let local = try gateway.start()
+            localGateway = gateway
+            localPreviewURL = local
+        } catch {
+            // Fallback to direct previewURL if gateway fails (e.g., port conflict); keep preview functional
+            localGateway = nil
+            localPreviewURL = nil
         }
     }
 
