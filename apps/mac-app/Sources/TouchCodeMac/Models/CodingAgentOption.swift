@@ -19,7 +19,8 @@ enum CodingAgentOption: String, CaseIterable, Identifiable {
 enum SidebarDestination: String, CaseIterable, Identifiable {
     case overview
     case project
-    case codingAgents
+    case codingAgent
+    case diagnostics
 
     var id: String { rawValue }
 
@@ -27,15 +28,17 @@ enum SidebarDestination: String, CaseIterable, Identifiable {
         switch self {
         case .overview: "Overview"
         case .project: "Project"
-        case .codingAgents: "Coding Agents"
+        case .codingAgent: "Coding Agent"
+        case .diagnostics: "Diagnostics"
         }
     }
 
     var systemImage: String {
         switch self {
-        case .overview: "ipad.and.iphone"
+        case .overview: "rectangle.connected.to.line.below"
         case .project: "folder"
-        case .codingAgents: "terminal"
+        case .codingAgent: "terminal"
+        case .diagnostics: "stethoscope"
         }
     }
 }
