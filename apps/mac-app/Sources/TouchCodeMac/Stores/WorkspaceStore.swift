@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 
 @MainActor
 final class WorkspaceStore: ObservableObject {
@@ -115,6 +116,18 @@ final class WorkspaceStore: ObservableObject {
             )
         } catch {
             reviewError = error.localizedDescription
+        }
+    }
+
+    func chooseProject() async {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Choose Project"
+        panel.message = "Choose the project you want to work on from your iPad."
+        if panel.runModal() == .OK, let url = panel.url {
+            projectPath = url.path
         }
     }
 }
