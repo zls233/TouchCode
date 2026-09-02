@@ -5,9 +5,9 @@ struct ProjectView: View {
 
     var body: some View {
         Form {
-            Section("Isolated MVP workspace") {
+            Section("Workspace") {
                 LabeledContent("Path", value: workspace.projectPath)
-                Text("This MVP uses a disposable copy of the bundled React demo. Real project selection is intentionally not advertised yet.")
+                Text("TouchCode works with a local project on this Mac.")
                     .foregroundStyle(.secondary)
             }
             Section("Safety") {

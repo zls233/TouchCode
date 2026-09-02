@@ -38,7 +38,7 @@ struct OverviewView: View {
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                         Spacer()
-                        Button(workspace.demoSession?.status == "running" ? "Demo Running" : "Start MVP Demo") {
+                        Button(workspace.demoSession?.status == "running" ? "Session Running" : "Start Session") {
                             Task { await workspace.startDemo() }
                         }
                         .disabled(workspace.demoSession?.status == "running")
@@ -124,15 +124,6 @@ struct OverviewView: View {
             Spacer()
         }
         .padding(28)
-        .toolbar {
-            ToolbarItem {
-                Button {
-                    Task { await workspace.refreshBridgeStatus() }
-                } label: {
-                    Label("Refresh", systemImage: "arrow.clockwise")
-                }
-            }
-        }
     }
 
     private func runIcon(_ run: CodingRunSnapshot) -> String {

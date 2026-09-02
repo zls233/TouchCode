@@ -17,8 +17,10 @@ struct ContentView: View {
                 OverviewView(workspace: workspace)
             case .project:
                 ProjectView(workspace: workspace)
-            case .codingAgents:
+            case .codingAgent:
                 CodingAgentsView(workspace: workspace)
+            case .diagnostics:
+                DiagnosticsView(workspace: workspace)
             }
         }
         .task {
