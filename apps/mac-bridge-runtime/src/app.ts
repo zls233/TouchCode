@@ -3,11 +3,15 @@ import { unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   acceptedVisualRunRequestSchema,
+  buildPairConfirmationTranscript,
   deviceIdentityCapability,
   deviceIdentitySchema,
+  devicePairConfirmationSchema,
+  devicePairConfirmResponseSchema,
   deviceTrustChallengeRequestSchema,
   pairSessionRequestSchema,
   touchCodeProtocolVersion,
+  verifyP256DERSignature,
   type AnnotationCapture,
   type AcceptedVisualRunRequest,
   type DeviceIdentity,
@@ -22,6 +26,8 @@ import {
   HostChallengeManager,
 } from "./host-challenge-manager.js";
 import type { HostIdentitySigner } from "./host-identity-signer.js";
+import { TrustedPeerError, TrustedPeerStore } from "./trusted-peer-store.js";
+import os from "node:os";
 
 export type BridgeAppOptions = {
   grants?: ProjectGrantStore;
@@ -32,6 +38,8 @@ export type BridgeAppOptions = {
   hostIdentity?: DeviceIdentity;
   hostIdentitySigner?: HostIdentitySigner;
   hostChallengeManager?: HostChallengeManager;
+  trustedPeerStore?: TrustedPeerStore;
+  trustedPeerFilePath?: string;
 };
 
 function isLoopback(address: string) {
@@ -85,6 +93,22 @@ export async function createBridgeApp(options: BridgeAppOptions = {}) {
         })
       : undefined);
 
+  const trustedPeers = options.trustedPeerStore
+    ?? (hostIdentity
+      ? new TrustedPeerStore({
+          filePath: options.trustedPeerFilePath
+            ?? process.env.TOUCHCODE_TRUSTED_PEERS_PATH
+            ?? path.join(os.homedir(), ".touchcode", "trusted-peers.json"),
+        })
+      : undefined);
+  if (trustedPeers) {
+    await trustedPeers.load().catch((error) => {
+      // Fail closed when the peer store cannot be read; keep in-memory empty and surface via logs.
+      // Fastify logger is disabled; rethrow to surface misconfiguration early.
+      throw error;
+    });
+  }
+
   app.get("/health", async () => ({
     status: "ok",
     service: "touchcode-mac-bridge",
@@ -129,6 +153,114 @@ export async function createBridgeApp(options: BridgeAppOptions = {}) {
         }
       }
       return reply.code(503).send({ error: "identity_signing_failed" });
+    }
+  });
+
+  app.post("/v1/device-trust/confirm", async (request, reply) => {
+    if (!hostChallenges || !trustedPeers || !hostIdentity) {
+      return reply.code(503).send({ error: "identity_proof_unavailable" });
+    }
+    const parsed = devicePairConfirmationSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: "invalid_pair_confirmation", details: parsed.error.issues });
+    }
+    const { challengeId, hostChallengeDigest, clientDeviceId, clientProof } = parsed.data;
+    let consumed: ReturnType<HostChallengeManager["consume"]>;
+    try {
+      consumed = hostChallenges.consume(challengeId);
+    } catch (error) {
+      if (error instanceof HostChallengeError) {
+        if (error.code === "challenge_not_found") return reply.code(404).send({ error: error.code });
+        if (error.code === "challenge_expired") return reply.code(410).send({ error: error.code });
+      }
+      return reply.code(500).send({ error: "challenge_consume_failed" });
+    }
+
+    if (consumed.transcriptDigest !== hostChallengeDigest) {
+      return reply.code(400).send({ error: "host_challenge_digest_mismatch" });
+    }
+    if (consumed.request.clientDeviceId !== clientDeviceId) {
+      return reply.code(400).send({ error: "client_device_mismatch" });
+    }
+    let transcript: Uint8Array;
+    try {
+      transcript = buildPairConfirmationTranscript({
+        version: 1,
+        challengeId,
+        hostChallengeDigest,
+        clientDeviceId,
+        sasConfirmed: true,
+      });
+    } catch {
+      return reply.code(400).send({ error: "invalid_pair_confirmation" });
+    }
+    const clientPublicKey = consumed.request.clientPublicKeyX963;
+    let verified = false;
+    try {
+      verified = verifyP256DERSignature(clientPublicKey, transcript, clientProof);
+    } catch {
+      verified = false;
+    }
+    if (!verified) {
+      return reply.code(401).send({ error: "invalid_client_proof" });
+    }
+
+    try {
+      const peer = await trustedPeers.upsertFromPairing({
+        peerDeviceId: clientDeviceId,
+        peerPublicKeyX963: clientPublicKey,
+        displayName: consumed.request.clientDisplayName,
+      });
+      const response = devicePairConfirmResponseSchema.parse({
+        version: 1,
+        relationshipId: peer.relationshipId,
+        challengeId,
+        hostChallengeDigest,
+        hostDeviceId: hostIdentity.deviceId,
+        clientDeviceId,
+        trustedPeer: peer,
+      });
+      return reply.code(201).send(response);
+    } catch (error) {
+      if (error instanceof TrustedPeerError && error.code === "peer_conflict") {
+        return reply.code(409).send({ error: error.code });
+      }
+      return reply.code(500).send({ error: "trusted_peer_storage_failed" });
+    }
+  });
+
+  app.get("/v1/device-trust/peers", async (_request, reply) => {
+    if (!trustedPeers || !hostIdentity) {
+      return reply.code(503).send({ error: "identity_proof_unavailable" });
+    }
+    return reply.code(200).send({ peers: trustedPeers.list() });
+  });
+
+  app.delete("/v1/device-trust/peers", async (_request, reply) => {
+    if (!trustedPeers || !hostIdentity) {
+      return reply.code(503).send({ error: "identity_proof_unavailable" });
+    }
+    await trustedPeers.clear();
+    return reply.code(204).send();
+  });
+
+  app.delete<{ Params: { identifier: string } }>("/v1/device-trust/peers/:identifier", async (request, reply) => {
+    if (!trustedPeers || !hostIdentity) {
+      return reply.code(503).send({ error: "identity_proof_unavailable" });
+    }
+    const id = request.params.identifier;
+    try {
+      if (id.startsWith("tcid1_")) {
+        await trustedPeers.removeByDeviceId(id);
+      } else {
+        await trustedPeers.removeByRelationshipId(id);
+      }
+      return reply.code(204).send();
+    } catch (error) {
+      if (error instanceof TrustedPeerError && error.code === "peer_not_found") {
+        return reply.code(404).send({ error: error.code });
+      }
+      return reply.code(500).send({ error: "trusted_peer_storage_failed" });
     }
   });
 

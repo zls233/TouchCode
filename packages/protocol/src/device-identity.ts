@@ -215,6 +215,42 @@ export const deviceTrustEstablishedSchema = z.object({
   hostProof: ecdsaP256DERSignatureSchema,
 }).strict();
 
+export const trustedPeerSchema = z.object({
+  version: z.literal(1),
+  relationshipId: relationshipIdSchema,
+  peerDeviceId: deviceIdSchema,
+  peerPublicKeyX963: p256PublicKeyX963Schema,
+  displayName: z.string().trim().min(1).max(128),
+  firstPairedAt: epochMillisSchema,
+  lastSeenAt: epochMillisSchema,
+}).strict().superRefine((peer, context) => {
+  const parsedKey = p256PublicKeyX963Schema.safeParse(peer.peerPublicKeyX963);
+  if (parsedKey.success && deriveDeviceId(parsedKey.data) !== peer.peerDeviceId) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["peerDeviceId"],
+      message: "peerDeviceId does not match peerPublicKeyX963",
+    });
+  }
+  if (peer.lastSeenAt < peer.firstPairedAt) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["lastSeenAt"],
+      message: "lastSeenAt must be at or after firstPairedAt",
+    });
+  }
+});
+
+export const devicePairConfirmResponseSchema = z.object({
+  version: z.literal(1),
+  relationshipId: relationshipIdSchema,
+  challengeId: challengeIdSchema,
+  hostChallengeDigest: sha256DigestSchema,
+  hostDeviceId: deviceIdSchema,
+  clientDeviceId: deviceIdSchema,
+  trustedPeer: trustedPeerSchema,
+}).strict();
+
 export const deviceIdentityMessageType = {
   hostChallenge: 1,
   pairConfirmation: 2,
@@ -228,6 +264,8 @@ export type DeviceTrustChallengeResponse = z.infer<typeof deviceTrustChallengeRe
 export type DevicePairConfirmation = z.infer<typeof devicePairConfirmationSchema>;
 export type DeviceReconnectProof = z.infer<typeof deviceReconnectProofSchema>;
 export type DeviceTrustEstablished = z.infer<typeof deviceTrustEstablishedSchema>;
+export type TrustedPeer = z.infer<typeof trustedPeerSchema>;
+export type DevicePairConfirmResponse = z.infer<typeof devicePairConfirmResponseSchema>;
 
 export type HostChallengeTranscriptInput = {
   purpose: "pair" | "reconnect";
